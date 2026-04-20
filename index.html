@@ -10,7 +10,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:#0a0a0a;color:#f0f0f0;min-height:100vh;overflow-x:hidden}
-.lottie-corner{position:fixed;top:16px;right:16px;width:56px;height:56px;z-index:100;cursor:pointer;opacity:0.85;transition:opacity 0.3s,transform 0.3s}
+.lottie-corner{position:fixed;top:16px;right:16px;width:56px;height:56px;z-index:100;cursor:pointer;opacity:0.85;transition:opacity 0.3s,transform 0.3s;pointer-events:none}
 .lottie-corner:hover{opacity:1;transform:scale(1.1)}
 .page{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:60px 24px}
 .logo{width:120px;margin-bottom:48px;opacity:0;animation:fadeUp 0.8s ease forwards}
@@ -53,7 +53,7 @@ h1{font-size:14px;font-weight:500;letter-spacing:3px;text-transform:uppercase;co
       <div class="card-desc">Taux de gaspillage, ventes, tendances hebdomadaires, analyses par site et par produit.</div>
       <span class="card-lang">Fran&#231;ais</span>
     </a>
-    <a class="card" href="b2c_profitability.html">
+    <a class="card" href="profitability.html">
       <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#20ff00" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
       <div class="card-title">B2C Profitability</div>
       <div class="card-desc">Revenue, COGS, margins, waste cost by site and product. Real Melba costs, 68 weeks of data.</div>
