@@ -504,6 +504,7 @@ function filterSiteTotals(f) {
   return Object.values(bySite).map(s => ({
     ...s,
     lost_revenue: s.wasted * (s.sold > 0 ? s.revenue / s.sold : globalAvgPrice),
+    avg_monthly_loss: (s.wasted * (s.sold > 0 ? s.revenue / s.sold : globalAvgPrice)) / (s.months_count || 1),
     wastage_pct: s.introduced > 0 ? +(s.wasted/s.introduced*100).toFixed(1) : 0,
     gross_margin_pct: s.revenue > 0 ? +(s.gross_profit/s.revenue*100).toFixed(1) : 0,
     net_margin_pct: s.revenue > 0 ? +(s.net_profit/s.revenue*100).toFixed(1) : 0,
@@ -522,13 +523,11 @@ function renderKPIs(mo) {
   let nm = totRev>0 ? (totNP/totRev*100) : 0;
   let wp = totIntro>0 ? (totWasted/totIntro*100) : 0;
   let wcr = totRev>0 ? (totWaste/totRev*100) : 0;
-  let totLostRev = totWasted * (totSold > 0 ? totRev/totSold : 10.05);
   document.getElementById('kpiRow').innerHTML =
     '<div class="kpi"><div class="label">Revenue</div><div class="value">'+fmtCHF(totRev)+'</div><div class="delta neutral">Avg CHF '+(mo.length>0?fmt(totRev/mo.length):0)+'/mo</div></div>'+
     '<div class="kpi"><div class="label">Gross Profit</div><div class="value">'+fmtCHF(totGP)+'</div><div class="delta '+pctClass(gm,65)+'">'+fmtPct(gm)+' margin</div></div>'+
     '<div class="kpi"><div class="label">Net Profit</div><div class="value">'+fmtCHF(totNP)+'</div><div class="delta '+pctClass(nm,55)+'">'+fmtPct(nm)+' margin</div></div>'+
     '<div class="kpi"><div class="label">Waste Cost</div><div class="value">'+fmtCHF(totWaste)+'</div><div class="delta '+wastePctClass(wcr)+'">'+fmtPct(wcr)+' of revenue</div></div>'+
-    '<div class="kpi"><div class="label">Lost Revenue</div><div class="value bad">'+fmtCHF(totLostRev)+'</div><div class="delta bad">'+fmt(totWasted)+' units unsold</div></div>'+
     '<div class="kpi"><div class="label">Units Sold</div><div class="value">'+fmt(totSold)+'</div><div class="delta neutral">'+fmt(totIntro)+' introduced</div></div>'+
     '<div class="kpi"><div class="label">Wastage Rate</div><div class="value">'+fmtPct(wp)+'</div><div class="delta '+wastePctClass(wp)+'">'+fmt(totWasted)+' units wasted</div></div>'+
     '<div class="kpi"><div class="label">Avg Unit Cost</div><div class="value">CHF '+(totIntro>0?(totCOGS/totIntro).toFixed(2):'\u2014')+'</div><div class="delta neutral">Avg price CHF '+(totSold>0?(totRev/totSold).toFixed(2):'\u2014')+'</div></div>'+
@@ -586,14 +585,14 @@ function renderSiteTab(f) {
   // SITE TOTALS TABLE — with clickable locations + unit wastage %
   let stHtml = '<table><thead><tr>'+
     '<th>Location</th><th class="num">Months</th><th class="chf">Revenue</th><th class="chf">Avg Mo Rev</th>'+
-    '<th class="chf">Gross Profit</th><th class="chf">Waste Cost</th><th class="chf">Lost Rev</th><th class="chf">Avg Mo Waste</th>'+
-    '<th class="pct">Waste % Rev</th><th class="pct">Wastage %</th><th class="chf">Net Profit</th>'+
+    '<th class="chf">Gross Profit</th><th class="chf">Waste Cost</th><th class="chf">Avg Mo Waste</th><th class="chf">Avg Mo Loss</th>'+
+    '<th class="pct">Waste % Rev</th><th class="pct">Wastage Units %</th><th class="chf">Net Profit</th>'+
     '<th class="pct">GM%</th><th class="pct">NM%</th></tr></thead><tbody>';
   sites.forEach(s => {
     stHtml += '<tr><td><a class="loc-link" data-loc="'+s.location.replace(/"/g,'&quot;')+'">'+s.location+'</a></td><td class="num">'+s.months_count+'</td>'+
       '<td class="chf">'+fmtCHF(s.revenue)+'</td><td class="chf">'+fmtCHF(s.avg_monthly_revenue)+'</td>'+
-      '<td class="chf">'+fmtCHF(s.gross_profit)+'</td><td class="chf">'+fmtCHF(s.waste_cost)+'</td>'+'<td class="chf">'+fmtCHF(s.lost_revenue)+'</td>'+
-      '<td class="chf">'+fmtCHF(s.avg_monthly_waste_chf)+'</td>'+
+      '<td class="chf">'+fmtCHF(s.gross_profit)+'</td><td class="chf">'+fmtCHF(s.waste_cost)+'</td>'+
+      '<td class="chf">'+fmtCHF(s.avg_monthly_waste_chf)+'</td>'+'<td class="chf bad">'+fmtCHF(s.avg_monthly_loss)+'</td>'+
       '<td class="pct '+wastePctClass(s.avg_monthly_waste_pct)+'">'+fmtPct(s.avg_monthly_waste_pct)+'</td>'+
       '<td class="pct '+wastePctClass(s.wastage_pct)+'">'+fmtPct(s.wastage_pct)+'</td>'+
       '<td class="chf">'+fmtCHF(s.net_profit)+'</td>'+
@@ -645,16 +644,15 @@ function renderSiteMonthlyTable(sm) {
   // SITE MONTHLY TABLE — with unit wastage %
   let smHtml = '<table><thead><tr><th>Location</th><th>Month</th>'+
     '<th class="chf">Revenue</th><th class="chf">GP</th>'+
-    '<th class="chf">Waste CHF</th><th class="chf">Lost Rev</th><th class="pct">Waste % Rev</th><th class="pct">Wastage %</th>'+
+    '<th class="chf">Waste CHF</th><th class="pct">Waste % Rev</th><th class="pct">Wastage Units %</th>'+
     '<th class="num">Intro</th><th class="num">Sold</th><th class="num">Wasted</th>'+
     '<th class="chf">Net Profit</th><th class="pct">GM%</th><th class="pct">NM%</th></tr></thead><tbody>';
   filtered.forEach(r => {
     let wasteRevPct = r.revenue > 0 ? +(r.waste_cost/r.revenue*100).toFixed(1) : 0;
-    let lostRev = r.wasted * (r.sold > 0 ? r.revenue / r.sold : 10.05);
     let unitWastePct = r.introduced > 0 ? +(r.wasted/r.introduced*100).toFixed(1) : 0;
     smHtml += '<tr><td><a class="loc-link" data-loc="'+r.location.replace(/"/g,'&quot;')+'">'+r.location+'</a></td><td>'+r.year_month+'</td>'+
       '<td class="chf">'+fmtCHF(r.revenue)+'</td><td class="chf">'+fmtCHF(r.gross_profit)+'</td>'+
-      '<td class="chf">'+fmtCHF(r.waste_cost)+'</td>'+'<td class="chf">'+fmtCHF(lostRev)+'</td>'+
+      '<td class="chf">'+fmtCHF(r.waste_cost)+'</td>'+
       '<td class="pct '+wastePctClass(wasteRevPct)+'">'+fmtPct(wasteRevPct)+'</td>'+
       '<td class="pct '+wastePctClass(unitWastePct)+'">'+fmtPct(unitWastePct)+'</td>'+
       '<td class="num">'+fmt(r.introduced)+'</td><td class="num">'+fmt(r.sold)+'</td><td class="num">'+fmt(r.wasted)+'</td>'+
@@ -690,7 +688,6 @@ function openDrill(location) {
   // Aggregate KPIs
   let totRev=0, totGP=0, totNP=0, totWaste=0, totIntro=0, totSold=0, totWasted=0;
   sm.forEach(r => { totRev+=r.revenue; totGP+=r.gross_profit; totNP+=r.net_profit; totWaste+=r.waste_cost; totIntro+=r.introduced; totSold+=r.sold; totWasted+=r.wasted; });
-  let totLostRev = sm.reduce((acc,r) => acc + r.wasted * (r.sold > 0 ? r.revenue/r.sold : 10.05), 0);
   let gm = totRev>0?(totGP/totRev*100):0;
   let nm = totRev>0?(totNP/totRev*100):0;
   let wp = totIntro>0?(totWasted/totIntro*100):0;
@@ -701,7 +698,6 @@ function openDrill(location) {
     '<div class="drill-kpi"><div class="label">Gross Profit</div><div class="value">'+fmtCHF(totGP)+'</div><div class="delta '+pctClass(gm,65)+'">'+fmtPct(gm)+' GM</div></div>'+
     '<div class="drill-kpi"><div class="label">Net Profit</div><div class="value">'+fmtCHF(totNP)+'</div><div class="delta '+pctClass(nm,55)+'">'+fmtPct(nm)+' NM</div></div>'+
     '<div class="drill-kpi"><div class="label">Waste Cost</div><div class="value">'+fmtCHF(totWaste)+'</div><div class="delta '+wastePctClass(wcr)+'">'+fmtPct(wcr)+' of rev</div></div>'+
-    '<div class="drill-kpi"><div class="label">Lost Revenue</div><div class="value bad">'+fmtCHF(totLostRev)+'</div></div>'+
     '<div class="drill-kpi"><div class="label">Units Sold</div><div class="value">'+fmt(totSold)+'</div><div class="delta neutral">of '+fmt(totIntro)+' intro</div></div>'+
     '<div class="drill-kpi"><div class="label">Wastage Rate</div><div class="value '+wastePctClass(wp)+'">'+fmtPct(wp)+'</div><div class="delta '+wastePctClass(wp)+'">'+fmt(totWasted)+' units</div></div>'+
     '<div class="drill-kpi"><div class="label">Avg Mo Revenue</div><div class="value">'+fmtCHF(totRev/sm.length)+'</div></div>'+
@@ -710,16 +706,15 @@ function openDrill(location) {
   // Monthly table with unit wastage %
   let dtHtml = '<table><thead><tr>'+
     '<th>Month</th><th class="chf">Revenue</th><th class="chf">GP</th><th class="chf">Net Profit</th>'+
-    '<th class="chf">Waste CHF</th><th class="chf">Lost Rev</th><th class="pct">Waste % Rev</th>'+
-    '<th class="num">Intro</th><th class="num">Sold</th><th class="num">Wasted</th><th class="pct">Wastage %</th>'+
+    '<th class="chf">Waste CHF</th><th class="pct">Waste % Rev</th>'+
+    '<th class="num">Intro</th><th class="num">Sold</th><th class="num">Wasted</th><th class="pct">Wastage Units %</th>'+
     '<th class="pct">GM%</th><th class="pct">NM%</th></tr></thead><tbody>';
   sm.forEach(r => {
     let wasteRevPct = r.revenue>0?+(r.waste_cost/r.revenue*100).toFixed(1):0;
-    let lostRev = r.wasted * (r.sold > 0 ? r.revenue / r.sold : 10.05);
     let unitWP = r.introduced>0?+(r.wasted/r.introduced*100).toFixed(1):0;
     dtHtml += '<tr><td>'+r.year_month+'</td>'+
       '<td class="chf">'+fmtCHF(r.revenue)+'</td><td class="chf">'+fmtCHF(r.gross_profit)+'</td><td class="chf">'+fmtCHF(r.net_profit)+'</td>'+
-      '<td class="chf">'+fmtCHF(r.waste_cost)+'</td>'+'<td class="chf">'+fmtCHF(lostRev)+'</td>'+
+      '<td class="chf">'+fmtCHF(r.waste_cost)+'</td>'+
       '<td class="pct '+wastePctClass(wasteRevPct)+'">'+fmtPct(wasteRevPct)+'</td>'+
       '<td class="num">'+fmt(r.introduced)+'</td><td class="num">'+fmt(r.sold)+'</td><td class="num">'+fmt(r.wasted)+'</td>'+
       '<td class="pct '+wastePctClass(unitWP)+'">'+fmtPct(unitWP)+'</td>'+
@@ -800,14 +795,14 @@ function renderProductTab(f) {
     '<th>Product</th><th>SKU</th><th>Cat</th>'+
     '<th class="num">Intro</th><th class="num">Sold</th><th class="num">Wasted</th>'+
     '<th class="chf">Unit Cost</th><th class="chf">Revenue</th>'+
-    '<th class="chf">GP</th><th class="chf">Waste$</th><th class="chf">Lost Rev</th><th class="pct">Wastage %</th>'+
+    '<th class="chf">GP</th><th class="chf">Waste$</th><th class="pct">Wastage Units %</th>'+
     '<th class="chf">Net</th><th class="pct">GM%</th><th class="pct">NM%</th>'+
     '</tr></thead><tbody>';
   prods.forEach(p => {
     ptHtml += '<tr><td>'+p.product+'</td><td>'+(p.SKU||'')+'</td><td>'+p.category+'</td>'+
       '<td class="num">'+fmt(p.introduced)+'</td><td class="num">'+fmt(p.sold)+'</td><td class="num">'+fmt(p.wasted)+'</td>'+
       '<td class="chf">CHF '+(p.unit_cost||0).toFixed(2)+'</td><td class="chf">'+fmtCHF(p.revenue)+'</td>'+
-      '<td class="chf">'+fmtCHF(p.gross_profit)+'</td><td class="chf">'+fmtCHF(p.waste_cost)+'</td>'+'<td class="chf">'+fmtCHF(p.wasted * (p.revenue_per_unit || (p.sold > 0 ? p.revenue/p.sold : 10.05)))+'</td>'+
+      '<td class="chf">'+fmtCHF(p.gross_profit)+'</td><td class="chf">'+fmtCHF(p.waste_cost)+'</td>'+
       '<td class="pct '+wastePctClass(p.wastage_pct)+'">'+fmtPct(p.wastage_pct)+'</td>'+
       '<td class="chf">'+fmtCHF(p.net_profit)+'</td>'+
       '<td class="pct '+pctClass(p.gross_margin_pct,65)+'">'+fmtPct(p.gross_margin_pct)+'</td>'+
