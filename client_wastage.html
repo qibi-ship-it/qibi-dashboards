@@ -24,20 +24,27 @@ body{background:#0a0a0a;color:#fff;font-family:Inter,-apple-system,sans-serif;fo
 .table-wrap{overflow-x:auto;border-radius:14px;border:1px solid #1a1a1a;margin-top:12px}
 table{width:100%;border-collapse:collapse;white-space:nowrap}
 thead th{background:#1a1a1a;color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:10px 12px;text-align:right;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none}
-thead th:first-child{text-align:left}
+thead th:first-child{text-align:left;min-width:180px}
 thead th:hover{color:#20ff00}
 thead th .sort-arrow{margin-left:4px;font-size:10px;opacity:0.5}
 thead th.sorted .sort-arrow{opacity:1;color:#20ff00}
 tbody td{padding:8px 12px;border-top:1px solid #1a1a1a;text-align:right;font-variant-numeric:tabular-nums}
-tbody td:first-child{text-align:left;font-weight:500}
+tbody td:first-child{text-align:left;font-weight:500;position:sticky;left:0;background:#0a0a0a;z-index:1}
+tbody tr:hover td:first-child{background:#1a1a1a}
 tbody tr:hover{background:#1a1a1a}
 tbody tr.global-row{background:#111;font-weight:700;border-top:2px solid #20ff00}
 tbody tr.global-row td{color:#20ff00}
+tbody tr.global-row td:first-child{background:#111}
+tbody tr.avg-row{background:#0d0d0d;border-top:1px solid #333}
+tbody tr.avg-row td{color:#888;font-style:italic}
+tbody tr.avg-row td:first-child{background:#0d0d0d}
+thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
 .ytd-col{background:rgba(32,255,0,0.05)}
 .green{color:#20ff00}
 .red{color:#ff4444}
 .orange{color:#ff9900}
 .dim{color:#888}
+.new-tag{color:#20ff00;font-size:10px;font-weight:700;letter-spacing:1px}
 .fridge-name{font-size:15px;font-weight:700;color:#fff}
 .machine-name{font-size:11px;color:#666;font-weight:400;margin-top:1px}
 .summary-cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
@@ -123,7 +130,6 @@ function fmtDeltaCHF(n) {
   return sign + 'CHF ' + Math.abs(n).toLocaleString('en-CH', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
 function deltaClass(n, inverted) {
-  // inverted=true means lower is better (wastage)
   if (n === 0 || isNaN(n)) return 'dim';
   if (inverted) return n < 0 ? 'delta-pos' : 'delta-neg';
   return n > 0 ? 'delta-pos' : 'delta-neg';
