@@ -13,6 +13,8 @@ body{background:#0a0a0a;color:#fff;font-family:Inter,-apple-system,sans-serif;fo
 .header img{height:32px}
 .header h1{font-size:18px;font-weight:700}
 .header .meta{color:#888;font-size:12px}
+.header .back-link{font-size:12px;color:#555;text-decoration:none;transition:color 0.2s;white-space:nowrap}
+.header .back-link:hover{color:#20ff00}
 .controls{display:flex;flex-wrap:wrap;gap:10px;padding:16px 32px;border-bottom:1px solid #1a1a1a;align-items:center}
 .controls select,.controls input{background:#1a1a1a;color:#fff;border:1px solid #333;border-radius:8px;padding:6px 12px;font-size:12px;font-family:inherit}
 .controls select:focus,.controls input:focus{outline:none;border-color:#20ff00}
@@ -77,9 +79,12 @@ thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
 <div class="header">
   <div style="display:flex;align-items:center;gap:12px">
     <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTIwIDQwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0ZXh0IHg9IjAiIHk9IjMwIiBmb250LWZhbWlseT0iSW50ZXIsc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjgwMCIgZm9udC1zaXplPSIzMiIgZmlsbD0iI2ZmZiI+UWk8dHNwYW4gZmlsbD0iIzIwZmYwMCI+Qmk8L3RzcGFuPjwvdGV4dD48L3N2Zz4=" alt="QiBi">
-    <h1>Client Sales Dashboard</h1>
+    <div>
+      <h1>Client Sales Dashboard</h1>
+      <div class="meta">Generated: 2026-06-07 06:51 | 74 weeks | 66 locations</div>
+    </div>
   </div>
-  <div class="meta">Generated: 2026-06-07 06:51 | 74 weeks | 66 locations</div>
+  <a href="index.html" class="back-link">&larr; All dashboards</a>
 </div>
 
 <div class="controls">
