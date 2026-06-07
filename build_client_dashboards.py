@@ -436,29 +436,46 @@ print(f"  Weeks: {len(weeks_sorted)} ({weeks_sorted[0]} to {weeks_sorted[-1]})")
 print("\nStep 5: Building JSON...")
 
 # --- SALES JSON ---
-# Aggregate: venue → week → {units, revenue}
-sales_by_venue_week = defaultdict(lambda: defaultdict(lambda: {"units":0,"revenue":0.0}))
+# Aggregate: venue → week → {units, revenue} + per-category breakdown
+sales_by_venue_week = defaultdict(lambda: defaultdict(lambda: {"units":0,"revenue":0.0,"cats":defaultdict(lambda: {"units":0,"revenue":0.0})}))
 
 for (week, venue, sku), data in sales_product.items():
+    cg = data["cat_group"]
     sales_by_venue_week[venue][week]["units"] += data["units"]
     sales_by_venue_week[venue][week]["revenue"] += data["revenue"]
+    sales_by_venue_week[venue][week]["cats"][cg]["units"] += data["units"]
+    sales_by_venue_week[venue][week]["cats"][cg]["revenue"] += data["revenue"]
 
-# Build venue-level weekly arrays
+# Build venue-level weekly arrays with category breakdowns
 venue_sales = {}
 for venue in venues_filtered:
     weeks_data = {}
     ytd_units = 0
     ytd_revenue = 0.0
+    ytd_cats = defaultdict(lambda: {"u":0,"r":0.0})
     for week in weeks_sorted:
-        d = sales_by_venue_week[venue].get(week, {"units":0,"revenue":0.0})
-        weeks_data[week] = {"u": d["units"], "r": round(d["revenue"],2)}
+        empty = {"units":0,"revenue":0.0,"cats":{}}
+        d = sales_by_venue_week[venue].get(week, empty)
+        wk_entry = {"u": d["units"], "r": round(d["revenue"],2)}
+        # Add non-zero category breakdowns
+        cats_obj = {}
+        for cg, cd in d.get("cats", {}).items():
+            if cd["units"] > 0:
+                cats_obj[cg] = {"u": cd["units"], "r": round(cd["revenue"],2)}
+                ytd_cats[cg]["u"] += cd["units"]
+                ytd_cats[cg]["r"] += cd["revenue"]
+        if cats_obj:
+            wk_entry["cats"] = cats_obj
+        weeks_data[week] = wk_entry
         ytd_units += d["units"]
         ytd_revenue += d["revenue"]
+    ytd_cats_out = {cg: {"u": v["u"], "r": round(v["r"],2)} for cg, v in ytd_cats.items() if v["u"] > 0}
     venue_sales[venue] = {
         "venue": venue,
         "weeks": weeks_data,
         "ytd_u": ytd_units,
-        "ytd_r": round(ytd_revenue, 2)
+        "ytd_r": round(ytd_revenue, 2),
+        "ytd_cats": ytd_cats_out
     }
 
 # --- WASTAGE JSON ---
@@ -486,8 +503,8 @@ name_to_sku.update(stock_name_sku)
 
 CAT_AVG_COGS = {"Fresh Food": 2.94, "Sweet Snacks": 1.20, "Savoury Snacks": 1.30, "Drinks": 1.25, "Other": 2.00}
 
-# Aggregate wastage by venue
-wastage_by_venue_week = defaultdict(lambda: defaultdict(lambda: {"intro":0,"wasted":0,"waste_cost":0.0}))
+# Aggregate wastage by venue with category breakdowns
+wastage_by_venue_week = defaultdict(lambda: defaultdict(lambda: {"intro":0,"wasted":0,"waste_cost":0.0,"cats":defaultdict(lambda: {"intro":0,"wasted":0,"waste_cost":0.0})}))
 
 for key, data in stock_agg.items():
     week, venue, product_name = key
@@ -503,31 +520,48 @@ for key, data in stock_agg.items():
     wastage_by_venue_week[venue][week]["intro"] += intro
     wastage_by_venue_week[venue][week]["wasted"] += wasted
     wastage_by_venue_week[venue][week]["waste_cost"] += waste_cost
+    wastage_by_venue_week[venue][week]["cats"][cat_group]["intro"] += intro
+    wastage_by_venue_week[venue][week]["cats"][cat_group]["wasted"] += wasted
+    wastage_by_venue_week[venue][week]["cats"][cat_group]["waste_cost"] += waste_cost
 
-# Build venue-level wastage arrays
+# Build venue-level wastage arrays with category breakdowns
 venue_wastage = {}
 for venue in venues_filtered:
     weeks_data = {}
     ytd_intro = 0
     ytd_wasted = 0
     ytd_waste_cost = 0.0
+    ytd_cats = defaultdict(lambda: {"i":0,"w":0,"c":0.0})
     for week in weeks_sorted:
-        d = wastage_by_venue_week[venue].get(week, {"intro":0,"wasted":0,"waste_cost":0.0})
-        weeks_data[week] = {
+        empty = {"intro":0,"wasted":0,"waste_cost":0.0,"cats":{}}
+        d = wastage_by_venue_week[venue].get(week, empty)
+        wk_entry = {
             "i": d["intro"],
             "w": d["wasted"],
             "c": round(d["waste_cost"], 2)
         }
+        cats_obj = {}
+        for cg, cd in d.get("cats", {}).items():
+            if cd["intro"] > 0 or cd["wasted"] > 0:
+                cats_obj[cg] = {"i": cd["intro"], "w": cd["wasted"], "c": round(cd["waste_cost"],2)}
+                ytd_cats[cg]["i"] += cd["intro"]
+                ytd_cats[cg]["w"] += cd["wasted"]
+                ytd_cats[cg]["c"] += cd["waste_cost"]
+        if cats_obj:
+            wk_entry["cats"] = cats_obj
+        weeks_data[week] = wk_entry
         ytd_intro += d["intro"]
         ytd_wasted += d["wasted"]
         ytd_waste_cost += d["waste_cost"]
 
+    ytd_cats_out = {cg: {"i": v["i"], "w": v["w"], "c": round(v["c"],2)} for cg, v in ytd_cats.items() if v["i"] > 0}
     venue_wastage[venue] = {
         "venue": venue,
         "weeks": weeks_data,
         "ytd_i": ytd_intro,
         "ytd_w": ytd_wasted,
-        "ytd_c": round(ytd_waste_cost, 2)
+        "ytd_c": round(ytd_waste_cost, 2),
+        "ytd_cats": ytd_cats_out
     }
 
 # --- PRODUCT-LEVEL DATA for filters ---
@@ -597,6 +631,7 @@ output = {
         "weeks": weeks_sorted,
         "venues": venues_filtered,
         "total_sales": len(sales_data),
+        "categories": sorted(set(d["cat_group"] for d in product_sales_agg.values() if d["cat_group"])),
     },
     "sales": {
         "by_fridge": venue_sales,  # keyed by venue name now

@@ -68,6 +68,17 @@ thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
 .waste-bar{display:inline-block;height:6px;border-radius:3px;vertical-align:middle;margin-left:4px}
 .delta-pos{color:#20ff00}
 .delta-neg{color:#ff4444}
+.loc-dropdown{position:relative;display:inline-block}
+.loc-btn{background:#1a1a1a;color:#fff;border:1px solid #333;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;min-width:160px;text-align:left}
+.loc-btn:hover{border-color:#20ff00}
+.loc-panel{display:none;position:absolute;top:100%;left:0;background:#111;border:1px solid #333;border-radius:8px;padding:8px;max-height:400px;overflow-y:auto;z-index:20;min-width:280px;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.5)}
+.loc-panel.open{display:block}
+.loc-panel label{display:block;padding:3px 8px;cursor:pointer;font-size:12px;color:#ccc;border-radius:4px}
+.loc-panel label:hover{background:#1a1a1a;color:#fff}
+.loc-panel input[type="checkbox"]{margin-right:8px;accent-color:#20ff00}
+.loc-actions{display:flex;gap:8px;padding:4px 8px 8px;border-bottom:1px solid #1a1a1a;margin-bottom:4px}
+.loc-actions button{background:none;border:1px solid #333;color:#888;border-radius:4px;padding:2px 10px;font-size:11px;cursor:pointer;font-family:inherit}
+.loc-actions button:hover{color:#20ff00;border-color:#20ff00}
 """
 
 QIBI_LOGO_BASE64 = "PHN2ZyB2aWV3Qm94PSIwIDAgMTIwIDQwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0ZXh0IHg9IjAiIHk9IjMwIiBmb250LWZhbWlseT0iSW50ZXIsc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjgwMCIgZm9udC1zaXplPSIzMiIgZmlsbD0iI2ZmZiI+UWk8dHNwYW4gZmlsbD0iIzIwZmYwMCI+Qmk8L3RzcGFuPjwvdGV4dD48L3N2Zz4="
@@ -104,6 +115,43 @@ var currentMode = 'sequential';
 var sortCol = null;
 var sortDir = 'desc';
 
+function toggleLocPanel() {
+  var p = document.getElementById('locPanel');
+  p.classList.toggle('open');
+}
+function locSelectAll() {
+  document.querySelectorAll('.loc-cb').forEach(function(cb) { cb.checked = true; });
+  updateLocBtn(); render();
+}
+function locDeselectAll() {
+  document.querySelectorAll('.loc-cb').forEach(function(cb) { cb.checked = false; });
+  updateLocBtn(); render();
+}
+function onLocChange() { updateLocBtn(); render(); }
+function updateLocBtn() {
+  var all = document.querySelectorAll('.loc-cb');
+  var checked = document.querySelectorAll('.loc-cb:checked');
+  var btn = document.getElementById('locBtn');
+  if (checked.length === 0 || checked.length === all.length) {
+    btn.textContent = 'All Locations (' + all.length + ')';
+  } else {
+    btn.textContent = 'Locations (' + checked.length + '/' + all.length + ')';
+  }
+}
+function getSelectedLocs() {
+  var all = document.querySelectorAll('.loc-cb');
+  var checked = document.querySelectorAll('.loc-cb:checked');
+  if (checked.length === 0 || checked.length === all.length) return null; // null = all
+  var out = [];
+  checked.forEach(function(cb) { out.push(cb.value); });
+  return out;
+}
+document.addEventListener('click', function(e) {
+  var p = document.getElementById('locPanel');
+  var b = document.getElementById('locBtn');
+  if (p && !p.contains(e.target) && e.target !== b) p.classList.remove('open');
+});
+
 function setMode(el) {
   document.querySelectorAll('.pill').forEach(function(p) { p.classList.remove('active'); });
   el.classList.add('active');
@@ -137,7 +185,34 @@ def build_header(title, meta_text):
 </div>"""
 
 # ============================================================
-# BUILD SALES DASHBOARD (v3.0)
+# LOCATION PANEL BUILDER (shared by both dashboards)
+# ============================================================
+def build_location_panel(venues):
+    """Build the location checkbox dropdown panel HTML"""
+    html = '<div class="loc-dropdown">\n'
+    html += f'  <button id="locBtn" class="loc-btn" onclick="toggleLocPanel()">All Locations ({len(venues)})</button>\n'
+    html += '  <div id="locPanel" class="loc-panel">\n'
+    html += '    <div class="loc-actions"><button onclick="locSelectAll()">Select All</button><button onclick="locDeselectAll()">Deselect All</button></div>\n'
+    for v in sorted(venues):
+        safe_v = v.replace("'", "\\'").replace('"', '&quot;')
+        html += f'    <label><input type="checkbox" class="loc-cb" value="{safe_v}" checked onchange="onLocChange()">{v}</label>\n'
+    html += '  </div>\n</div>'
+    return html
+
+# ============================================================
+# CATEGORY FILTER BUILDER (shared by both dashboards)
+# ============================================================
+def build_category_filter(categories):
+    """Build the category dropdown select HTML"""
+    html = '<div>\n  <label>Category</label><br>\n  <select id="catFilter" onchange="render()">\n'
+    html += '    <option value="all">All Categories</option>\n'
+    for cat in sorted(categories):
+        html += f'    <option value="{cat}">{cat}</option>\n'
+    html += '  </select>\n</div>'
+    return html
+
+# ============================================================
+# BUILD SALES DASHBOARD (v4.0)
 # ============================================================
 def build_sales_html():
     meta = DATA["meta"]
@@ -162,9 +237,10 @@ def build_sales_html():
 {build_header("Client Sales Dashboard", meta_text)}
 
 <div class="controls">
+  {build_category_filter(DATA.get("meta",{}).get("categories",[]))}
   <div>
-    <label>Search</label><br>
-    <input type="text" id="searchInput" placeholder="Location or fridge..." oninput="render()">
+    <label>Locations</label><br>
+    {build_location_panel(venues)}
   </div>
   <div>
     <label>View</label><br>
@@ -201,7 +277,8 @@ var DATA = {DATA_JSON};
 {SHARED_JS}
 
 function render() {{
-  var search = document.getElementById('searchInput').value.toLowerCase();
+  var cat = document.getElementById('catFilter').value;
+  var selectedLocs = getSelectedLocs(); // null = all
   var show = document.getElementById('showFilter').value;
   var metric = document.getElementById('metricFilter').value;
   var mode = currentMode;
@@ -212,8 +289,20 @@ function render() {{
   // In sequential mode, pct metric falls back to revenue
   if (mode === 'sequential' && metric === 'pct') metric = 'revenue';
 
-  // ── 1. Data is already venue-keyed (no fridge→venue aggregation needed) ──
-  var venueMap = salesData;  // keys are venue names directly
+  // Helper: extract values from a week entry, respecting category filter
+  function getWV(weekEntry) {{
+    if (!weekEntry) return {{u:0, r:0}};
+    if (cat === 'all') return {{u: weekEntry.u || 0, r: weekEntry.r || 0}};
+    var c = (weekEntry.cats || {{}})[cat];
+    return c ? {{u: c.u || 0, r: c.r || 0}} : {{u:0, r:0}};
+  }}
+  function getYTD(venueData) {{
+    if (cat === 'all') return {{u: venueData.ytd_u || 0, r: venueData.ytd_r || 0}};
+    var c = (venueData.ytd_cats || {{}})[cat];
+    return c ? {{u: c.u || 0, r: c.r || 0}} : {{u:0, r:0}};
+  }}
+
+  var venueMap = salesData;
 
   // ── 2. Determine display weeks ──
   var displayWeeks = [];
@@ -223,7 +312,7 @@ function render() {{
   function weekHasData(wk) {{
     var total = 0;
     Object.keys(venueMap).forEach(function(v) {{
-      total += (venueMap[v].weeks[wk] || {{u:0}}).u;
+      total += getWV(venueMap[v].weeks[wk]).u;
     }});
     return total > 0;
   }}
@@ -240,18 +329,17 @@ function render() {{
   Object.keys(venueMap).forEach(function(venue) {{
     var vd = venueMap[venue];
 
-    // Search filter
-    if (search && venue.toLowerCase().indexOf(search) === -1) return;
+    // Location checkbox filter
+    if (selectedLocs && selectedLocs.indexOf(venue) === -1) return;
 
     var weekValues = [];
     var ytdVal = 0, ytdDelta = 0, ytdPctDelta = null;
 
     if (mode === 'yoy') {{
-      // ── YoY: per-week delta TY vs LY same week ──
       displayWeeks.forEach(function(wk) {{
-        var d = vd.weeks[wk] || {{u:0, r:0}};
+        var d = getWV(vd.weeks[wk]);
         var lyWk = getMatchingWeekLastYear(wk);
-        var lyD = vd.weeks[lyWk] || {{u:0, r:0}};
+        var lyD = getWV(vd.weeks[lyWk]);
         weekValues.push({{
           tyR: d.r, tyU: d.u, lyR: lyD.r, lyU: lyD.u,
           deltaR: d.r - lyD.r, deltaU: d.u - lyD.u,
@@ -260,13 +348,12 @@ function render() {{
         }});
       }});
 
-      // YTD: cumulative TY vs cumulative LY for all 2026 weeks
       var tyR = 0, lyR = 0, tyU = 0, lyU = 0;
       weeks2026.filter(weekHasData).forEach(function(wk) {{
-        var d = vd.weeks[wk] || {{u:0, r:0}};
+        var d = getWV(vd.weeks[wk]);
         tyR += d.r; tyU += d.u;
         var lyWk = getMatchingWeekLastYear(wk);
-        var lyD = vd.weeks[lyWk] || {{u:0, r:0}};
+        var lyD = getWV(vd.weeks[lyWk]);
         lyR += lyD.r; lyU += lyD.u;
       }});
       ytdVal = metric === 'units' ? tyU : tyR;
@@ -275,13 +362,12 @@ function render() {{
       ytdPctDelta = lyBase > 0 ? (ytdDelta / lyBase * 100) : (ytdVal > 0 ? null : 0);
 
     }} else if (mode === 'pop') {{
-      // ── Cumulative: running sum W01..Wn TY vs W01..Wn LY ──
       var cumTyR = 0, cumLyR = 0, cumTyU = 0, cumLyU = 0;
       displayWeeks.forEach(function(wk) {{
-        var d = vd.weeks[wk] || {{u:0, r:0}};
+        var d = getWV(vd.weeks[wk]);
         cumTyR += d.r; cumTyU += d.u;
         var lyWk = getMatchingWeekLastYear(wk);
-        var lyD = vd.weeks[lyWk] || {{u:0, r:0}};
+        var lyD = getWV(vd.weeks[lyWk]);
         cumLyR += lyD.r; cumLyU += lyD.u;
         weekValues.push({{
           tyR: cumTyR, tyU: cumTyU, lyR: cumLyR, lyU: cumLyU,
@@ -296,12 +382,12 @@ function render() {{
       ytdPctDelta = lyBase > 0 ? (ytdDelta / lyBase * 100) : (ytdVal > 0 ? null : 0);
 
     }} else {{
-      // ── Sequential: absolute values ──
       displayWeeks.forEach(function(wk) {{
-        var d = vd.weeks[wk] || {{u:0, r:0}};
+        var d = getWV(vd.weeks[wk]);
         weekValues.push({{tyR: d.r, tyU: d.u}});
       }});
-      ytdVal = metric === 'units' ? vd.ytd_u : vd.ytd_r;
+      var ytd = getYTD(vd);
+      ytdVal = metric === 'units' ? ytd.u : ytd.r;
     }}
 
     rows.push({{
@@ -407,15 +493,21 @@ function render() {{
   var avgYtdVal = globalYtdVal / avgYtdActive;
   var avgYtdDelta = globalYtdDelta / avgYtdActive;
 
-  // ── 8. Summary cards ──
+  // ── 8. Summary cards (category + location aware) ──
   var totalRev = 0, totalUnits = 0;
-  Object.keys(venueMap).forEach(function(v) {{ totalRev += venueMap[v].ytd_r; totalUnits += venueMap[v].ytd_u; }});
-  var avgPerLocation = totalRev / Object.keys(venueMap).length;
-  var avgPerWeek = totalRev / weeks.length;
+  rows.forEach(function(r) {{
+    var vd = venueMap[r.venue];
+    var ytd = getYTD(vd);
+    totalRev += ytd.r;
+    totalUnits += ytd.u;
+  }});
+  var activeLocCount = rows.length || 1;
+  var avgPerLocation = totalRev / activeLocCount;
+  var avgPerWeek = totalRev / (weeks.length || 1);
 
   var cardsHtml = '<div class="summary-cards">' +
     '<div class="summary-card"><div class="label">Total Revenue</div><div class="value green">' + fmtCHF(totalRev) + '</div><div class="sub">' + fmt(totalUnits) + ' units</div></div>' +
-    '<div class="summary-card"><div class="label">Locations</div><div class="value">' + Object.keys(venueMap).length + '</div></div>' +
+    '<div class="summary-card"><div class="label">Locations</div><div class="value">' + activeLocCount + '</div></div>' +
     '<div class="summary-card"><div class="label">Avg / Location</div><div class="value">' + fmtCHF(avgPerLocation) + '</div></div>' +
     '<div class="summary-card"><div class="label">Avg / Week</div><div class="value">' + fmtCHF(avgPerWeek) + '</div></div>' +
     '</div>';
@@ -473,31 +565,15 @@ function render() {{
   var ytdCI = displayWeeks.length + 1;
   headerHtml += '<th class="ytd-col" onclick="toggleSort(' + ytdCI + ')">YTD <span class="sort-arrow">' + sa(ytdCI) + '</span></th></tr>';
 
-  // Location rows
   var bodyHtml = '';
-  rows.forEach(function(r) {{
-    bodyHtml += '<tr><td><div class="fridge-name">' + r.venue + '</div></td>';
-    r.weekValues.forEach(function(wv) {{
-      bodyHtml += '<td>' + cellHtml(wv) + '</td>';
-    }});
-    bodyHtml += '<td class="ytd-col">' + ytdCellHtml(r.ytdVal, r.ytdDelta, r.ytdPctDelta) + '</td></tr>';
-  }});
 
-  // Global Total row
-  bodyHtml += '<tr class="global-row"><td><div class="fridge-name">Global Total</div><div class="machine-name">All ' + rows.length + ' locations</div></td>';
-  globalWV.forEach(function(gv) {{
-    bodyHtml += '<td>' + cellHtml(gv, true) + '</td>';
-  }});
-  bodyHtml += '<td class="ytd-col">' + ytdCellHtml(globalYtdVal, globalYtdDelta, globalYtdPctDelta) + '</td></tr>';
-
-  // Avg per Location row
-  bodyHtml += '<tr class="avg-row"><td><div class="fridge-name">Avg / Location</div><div class="machine-name">Active locations per week</div></td>';
+  // ── Avg / Location row (TOP of table) ──
+  bodyHtml += '<tr class="avg-row"><td><div class="fridge-name">Avg / Location</div><div class="machine-name">' + rows.length + ' active locations</div></td>';
   avgWV.forEach(function(av) {{
     if (mode === 'sequential') {{
       if (metric === 'units') bodyHtml += '<td>' + fmt(Math.round(av.tyU)) + ' <span style="color:#555;font-size:10px">(' + av.active + ')</span></td>';
       else bodyHtml += '<td>' + fmtCHF(Math.round(av.tyR)) + ' <span style="color:#555;font-size:10px">(' + av.active + ')</span></td>';
     }} else if (metric === 'pct') {{
-      // For avg row in pct mode, show the global % (same rate)
       if (av.pctR === null) bodyHtml += '<td><span class="new-tag">NEW</span></td>';
       else {{
         var cls = deltaClass(av.pctR, false);
@@ -511,7 +587,6 @@ function render() {{
       bodyHtml += '<td class="' + cls + '">' + fmtDeltaCHF(Math.round(av.deltaR)) + ' <span style="color:#555;font-size:10px">(' + av.active + ')</span></td>';
     }}
   }});
-  // Avg YTD
   if (mode === 'sequential') {{
     bodyHtml += '<td class="ytd-col">' + (metric === 'units' ? fmt(Math.round(avgYtdVal)) : fmtCHF(Math.round(avgYtdVal))) + '</td>';
   }} else if (metric === 'pct') {{
@@ -520,6 +595,22 @@ function render() {{
     bodyHtml += '<td class="ytd-col">' + (metric === 'units' ? ((avgYtdDelta >= 0 ? '+' : '') + fmt(Math.round(avgYtdDelta))) : fmtDeltaCHF(Math.round(avgYtdDelta))) + '</td>';
   }}
   bodyHtml += '</tr>';
+
+  // ── Location rows ──
+  rows.forEach(function(r) {{
+    bodyHtml += '<tr><td><div class="fridge-name">' + r.venue + '</div></td>';
+    r.weekValues.forEach(function(wv) {{
+      bodyHtml += '<td>' + cellHtml(wv) + '</td>';
+    }});
+    bodyHtml += '<td class="ytd-col">' + ytdCellHtml(r.ytdVal, r.ytdDelta, r.ytdPctDelta) + '</td></tr>';
+  }});
+
+  // ── Global Total row (BOTTOM) ──
+  bodyHtml += '<tr class="global-row"><td><div class="fridge-name">Global Total</div><div class="machine-name">All ' + rows.length + ' locations</div></td>';
+  globalWV.forEach(function(gv) {{
+    bodyHtml += '<td>' + cellHtml(gv, true) + '</td>';
+  }});
+  bodyHtml += '<td class="ytd-col">' + ytdCellHtml(globalYtdVal, globalYtdDelta, globalYtdPctDelta) + '</td></tr>';
 
   document.getElementById('mainContent').innerHTML = cardsHtml +
     '<div class="table-wrap"><table><thead>' + headerHtml + '</thead><tbody>' + bodyHtml + '</tbody></table></div>';
@@ -557,22 +648,13 @@ def build_wastage_html():
 {build_header("Client Wastage Dashboard", meta_text)}
 
 <div class="controls">
+  {build_category_filter(DATA.get("meta",{}).get("categories",[]))}
   <div>
-    <label>Category</label><br>
-    <select id="catFilter" onchange="render()">
-      <option value="all">All Categories</option>
-      <option value="Fresh Food">Fresh Food</option>
-      <option value="Sweet Snacks">Sweet Snacks</option>
-      <option value="Savoury Snacks">Savoury Snacks</option>
-      <option value="Drinks">Drinks</option>
-    </select>
+    <label>Locations</label><br>
+    {build_location_panel(venues)}
   </div>
   <div>
-    <label>Search</label><br>
-    <input type="text" id="searchInput" placeholder="Location or fridge..." oninput="render()">
-  </div>
-  <div>
-    <label>L4L Mode</label><br>
+    <label>View</label><br>
     <div class="l4l-controls">
       <span class="pill active" data-mode="sequential" onclick="setMode(this)">Sequential</span>
       <span class="pill" data-mode="yoy" onclick="setMode(this)">YoY</span>
@@ -582,7 +664,7 @@ def build_wastage_html():
   <div>
     <label>Show</label><br>
     <select id="showFilter" onchange="render()">
-      <option value="all">All Fridges</option>
+      <option value="all">All Locations</option>
       <option value="top10worst">Top 10 Worst (Waste %)</option>
       <option value="top10best">Top 10 Best (Waste %)</option>
     </select>
@@ -619,13 +701,26 @@ function wasteColorClass(pct) {{
 
 function render() {{
   var cat = document.getElementById('catFilter').value;
-  var search = document.getElementById('searchInput').value.toLowerCase();
+  var selectedLocs = getSelectedLocs(); // null = all
   var show = document.getElementById('showFilter').value;
   var metric = document.getElementById('metricFilter').value;
   var mode = currentMode;
 
   var wastageData = DATA.wastage.by_fridge;
   var weeks = DATA.meta.weeks;
+
+  // Helper: extract values from a week entry, respecting category filter
+  function getWW(weekEntry) {{
+    if (!weekEntry) return {{i:0, w:0, c:0}};
+    if (cat === 'all') return {{i: weekEntry.i || 0, w: weekEntry.w || 0, c: weekEntry.c || 0}};
+    var cc = (weekEntry.cats || {{}})[cat];
+    return cc ? {{i: cc.i || 0, w: cc.w || 0, c: cc.c || 0}} : {{i:0, w:0, c:0}};
+  }}
+  function getWasteYTD(venueData) {{
+    if (cat === 'all') return {{i: venueData.ytd_i || 0, w: venueData.ytd_w || 0, c: venueData.ytd_c || 0}};
+    var cc = (venueData.ytd_cats || {{}})[cat];
+    return cc ? {{i: cc.i || 0, w: cc.w || 0, c: cc.c || 0}} : {{i:0, w:0, c:0}};
+  }}
 
   // Determine display weeks
   var displayWeeks = [];
@@ -640,34 +735,34 @@ function render() {{
     displayWeeks = last12;
   }}
 
-  // Build venue rows (data is now venue-keyed)
+  // Build venue rows
   var rows = [];
-  var venueKeys = Object.keys(wastageData);
-
-  venueKeys.forEach(function(venue) {{
+  Object.keys(wastageData).forEach(function(venue) {{
     var fd = wastageData[venue];
 
-    if (search && venue.toLowerCase().indexOf(search) === -1) return;
+    // Location checkbox filter
+    if (selectedLocs && selectedLocs.indexOf(venue) === -1) return;
 
     var weekValues = [];
-    var ytdIntro = fd.ytd_i;
-    var ytdWasted = fd.ytd_w;
-    var ytdCost = fd.ytd_c;
+    var ytd = getWasteYTD(fd);
+    var ytdIntro = ytd.i;
+    var ytdWasted = ytd.w;
+    var ytdCost = ytd.c;
     var ytdPct = ytdIntro > 0 ? (ytdWasted / ytdIntro * 100) : 0;
 
     displayWeeks.forEach(function(wk) {{
-      var d = fd.weeks[wk] || {{i:0, w:0, c:0}};
+      var d = getWW(fd.weeks[wk]);
       var pct = d.i > 0 ? (d.w / d.i * 100) : 0;
 
       if (mode === 'yoy') {{
         var lyWk = getMatchingWeekLastYear(wk);
-        var lyD = fd.weeks[lyWk] || {{i:0, w:0, c:0}};
+        var lyD = getWW(fd.weeks[lyWk]);
         var lyPct = lyD.i > 0 ? (lyD.w / lyD.i * 100) : 0;
         weekValues.push({{intro: d.i, wasted: d.w, cost: d.c, pct: pct, lyPct: lyPct, deltaPct: pct - lyPct, deltaCost: d.c - lyD.c, deltaUnits: d.w - lyD.w}});
       }} else if (mode === 'pop') {{
         var wkIdx = weeks.indexOf(wk);
         var prevWk = wkIdx >= 12 ? weeks[wkIdx - 12] : null;
-        var prevD = prevWk ? (fd.weeks[prevWk] || {{i:0, w:0, c:0}}) : {{i:0, w:0, c:0}};
+        var prevD = prevWk ? getWW(fd.weeks[prevWk]) : {{i:0, w:0, c:0}};
         var prevPct = prevD.i > 0 ? (prevD.w / prevD.i * 100) : 0;
         weekValues.push({{intro: d.i, wasted: d.w, cost: d.c, pct: pct, prevPct: prevPct, deltaPct: pct - prevPct, deltaCost: d.c - prevD.c, deltaUnits: d.w - prevD.w}});
       }} else {{
@@ -681,10 +776,10 @@ function render() {{
       var tyWeeks = weeks.filter(function(w) {{ return w.startsWith('2026-'); }});
       var tyIntro = 0, tyWasted = 0, tyCost = 0, lyIntro = 0, lyWasted = 0, lyCost = 0;
       tyWeeks.forEach(function(wk) {{
-        var d = fd.weeks[wk] || {{i:0, w:0, c:0}};
+        var d = getWW(fd.weeks[wk]);
         tyIntro += d.i; tyWasted += d.w; tyCost += d.c;
         var lyWk = getMatchingWeekLastYear(wk);
-        var lyD = fd.weeks[lyWk] || {{i:0, w:0, c:0}};
+        var lyD = getWW(fd.weeks[lyWk]);
         lyIntro += lyD.i; lyWasted += lyD.w; lyCost += lyD.c;
       }});
       var tyPct = tyIntro > 0 ? (tyWasted / tyIntro * 100) : 0;
@@ -695,6 +790,7 @@ function render() {{
       ytdDeltaUnits = tyWasted - lyWasted;
       ytdCost = tyCost;
       ytdWasted = tyWasted;
+      ytdIntro = tyIntro;
     }}
 
     rows.push({{
@@ -727,7 +823,6 @@ function render() {{
       if (sortCol === 0) {{ va = a.venue.toLowerCase(); vb = b.venue.toLowerCase(); return sortDir === 'asc' ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1); }}
       var idx = sortCol - 1;
       if (sortCol === displayWeeks.length + 1) {{
-        // YTD column
         if (mode === 'yoy') {{ va = a.ytdDeltaPct; vb = b.ytdDeltaPct; }}
         else if (metric === 'pct') {{ va = a.ytdPct; vb = b.ytdPct; }}
         else if (metric === 'cost') {{ va = a.ytdCost; vb = b.ytdCost; }}
@@ -764,10 +859,9 @@ function render() {{
     var pct = totalIntro > 0 ? (totalWasted / totalIntro * 100) : 0;
 
     if (mode === 'yoy') {{
-      // Recompute LY totals from raw data for global accuracy
       var lyWk = getMatchingWeekLastYear(wk);
       rows.forEach(function(r) {{
-        var lyD = wastageData[r.venue].weeks[lyWk] || {{i:0, w:0, c:0}};
+        var lyD = getWW(wastageData[r.venue].weeks[lyWk]);
         lyTotalIntro += lyD.i; lyTotalWasted += lyD.w; lyTotalCost += lyD.c;
       }});
       var lyPct = lyTotalIntro > 0 ? (lyTotalWasted / lyTotalIntro * 100) : 0;
@@ -777,7 +871,7 @@ function render() {{
       var prevWk = wkIdx >= 12 ? weeks[wkIdx - 12] : null;
       if (prevWk) {{
         rows.forEach(function(r) {{
-          var prevD = wastageData[r.venue].weeks[prevWk] || {{i:0, w:0, c:0}};
+          var prevD = getWW(wastageData[r.venue].weeks[prevWk]);
           prevTotalIntro += prevD.i; prevTotalWasted += prevD.w; prevTotalCost += prevD.c;
         }});
       }}
@@ -790,7 +884,6 @@ function render() {{
 
   // Global YTD
   var gYtdIntro = 0, gYtdWasted = 0, gYtdCost = 0;
-  var gLyYtdIntro = 0, gLyYtdWasted = 0, gLyYtdCost = 0;
   rows.forEach(function(r) {{ gYtdIntro += r.ytdIntro; gYtdWasted += r.ytdWasted; gYtdCost += r.ytdCost; }});
   var gYtdPct = gYtdIntro > 0 ? (gYtdWasted / gYtdIntro * 100) : 0;
 
@@ -800,10 +893,10 @@ function render() {{
     var gTyIntro = 0, gTyWasted = 0, gTyCost = 0, gLyIntro2 = 0, gLyWasted2 = 0, gLyCost2 = 0;
     rows.forEach(function(r) {{
       tyWeeks.forEach(function(wk) {{
-        var d = wastageData[r.venue].weeks[wk] || {{i:0, w:0, c:0}};
+        var d = getWW(wastageData[r.venue].weeks[wk]);
         gTyIntro += d.i; gTyWasted += d.w; gTyCost += d.c;
         var lyWk = getMatchingWeekLastYear(wk);
-        var lyD = wastageData[r.venue].weeks[lyWk] || {{i:0, w:0, c:0}};
+        var lyD = getWW(wastageData[r.venue].weeks[lyWk]);
         gLyIntro2 += lyD.i; gLyWasted2 += lyD.w; gLyCost2 += lyD.c;
       }});
     }});
@@ -815,129 +908,143 @@ function render() {{
     gYtdDeltaUnits = gTyWasted - gLyWasted2;
   }}
 
-  // Summary cards
+  // ── Avg per Location ──
+  var avgWeekValues = [];
+  displayWeeks.forEach(function(wk, wi) {{
+    var activeCount = 0;
+    rows.forEach(function(r) {{ if (r.weekValues[wi].intro > 0) activeCount++; }});
+    var g = globalWeekValues[wi];
+    var div = activeCount || 1;
+    avgWeekValues.push({{
+      intro: g.intro / div, wasted: g.wasted / div, cost: g.cost / div,
+      pct: g.pct, deltaPct: g.deltaPct || 0, deltaCost: (g.deltaCost || 0) / div,
+      deltaUnits: (g.deltaUnits || 0) / div, active: activeCount
+    }});
+  }});
+  var avgLocCount = rows.length || 1;
+  var avgYtdPct = gYtdPct;
+  var avgYtdCost = gYtdCost / avgLocCount;
+  var avgYtdWasted = gYtdWasted / avgLocCount;
+
+  // Summary cards (filter-aware)
   var cardsHtml = '<div class="summary-cards">' +
     '<div class="summary-card"><div class="label">Total Introduced</div><div class="value">' + fmt(gYtdIntro) + '</div></div>' +
     '<div class="summary-card"><div class="label">Total Wasted</div><div class="value red">' + fmt(gYtdWasted) + '</div><div class="sub">' + fmtPct(gYtdPct) + ' waste rate</div></div>' +
     '<div class="summary-card"><div class="label">Waste Cost (COGS)</div><div class="value orange">' + fmtCHF(gYtdCost) + '</div></div>' +
-    '<div class="summary-card"><div class="label">Avg Waste / Location / Week</div><div class="value">' + fmt(Math.round(gYtdWasted / rows.length / weeks.length)) + '</div></div>' +
+    '<div class="summary-card"><div class="label">Locations</div><div class="value">' + rows.length + '</div></div>' +
     '</div>';
 
-  // Build table
-  var headerHtml = '<tr><th onclick="toggleSort(0)">Location <span class="sort-arrow">' + (sortCol===0 ? (sortDir==='asc'?'▲':'▼') : '⇅') + '</span></th>';
+  // Build table header
+  var sa = function(ci) {{ return sortCol === ci ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'; }};
+  var headerHtml = '<tr><th onclick="toggleSort(0)">Location <span class="sort-arrow">' + sa(0) + '</span></th>';
   displayWeeks.forEach(function(wk, i) {{
     var colIdx = i + 1;
     var label = wk.replace(/^\\d{{4}}-/, '');
-    headerHtml += '<th onclick="toggleSort(' + colIdx + ')">' + label + ' <span class="sort-arrow">' + (sortCol===colIdx ? (sortDir==='asc'?'▲':'▼') : '⇅') + '</span></th>';
+    headerHtml += '<th onclick="toggleSort(' + colIdx + ')">' + label + ' <span class="sort-arrow">' + sa(colIdx) + '</span></th>';
   }});
   var ytdColIdx = displayWeeks.length + 1;
-  headerHtml += '<th class="ytd-col" onclick="toggleSort(' + ytdColIdx + ')">YTD <span class="sort-arrow">' + (sortCol===ytdColIdx ? (sortDir==='asc'?'▲':'▼') : '⇅') + '</span></th></tr>';
+  headerHtml += '<th class="ytd-col" onclick="toggleSort(' + ytdColIdx + ')">YTD <span class="sort-arrow">' + sa(ytdColIdx) + '</span></th></tr>';
+
+  // Cell rendering helpers
+  function wasteCellHtml(wv) {{
+    if (mode !== 'sequential') {{
+      if (metric === 'pct') {{
+        var cls = deltaClass(wv.deltaPct, true);
+        return '<span class="' + cls + '">' + fmtDelta(wv.deltaPct) + '</span>';
+      }} else if (metric === 'cost') {{
+        var cls = deltaClass(wv.deltaCost, true);
+        return '<span class="' + cls + '">' + fmtDeltaCHF(wv.deltaCost) + '</span>';
+      }} else {{
+        var cls = deltaClass(wv.deltaUnits, true);
+        return '<span class="' + cls + '">' + (wv.deltaUnits >= 0 ? '+' : '') + fmt(Math.round(wv.deltaUnits)) + '</span>';
+      }}
+    }} else {{
+      if (metric === 'pct') {{
+        var cls = wasteColorClass(wv.pct);
+        var barW = Math.min(wv.pct * 2, 100);
+        return '<span class="' + cls + '">' + fmtPct(wv.pct) + '</span><span class="waste-bar" style="width:' + barW + 'px;background:' + wasteColor(wv.pct) + '"></span>';
+      }} else if (metric === 'cost') {{
+        return fmtCHF(wv.cost);
+      }} else {{
+        return fmt(Math.round(wv.wasted));
+      }}
+    }}
+  }}
+
+  function wasteYtdCellHtml(r) {{
+    if (mode === 'yoy') {{
+      if (metric === 'pct') {{ var cls = deltaClass(r.ytdDeltaPct, true); return '<span class="' + cls + '">' + fmtDelta(r.ytdDeltaPct) + '</span>'; }}
+      if (metric === 'cost') {{ var cls = deltaClass(r.ytdDeltaCost, true); return '<span class="' + cls + '">' + fmtDeltaCHF(r.ytdDeltaCost) + '</span>'; }}
+      var cls = deltaClass(r.ytdDeltaUnits, true); return '<span class="' + cls + '">' + (r.ytdDeltaUnits >= 0 ? '+' : '') + fmt(r.ytdDeltaUnits) + '</span>';
+    }}
+    if (metric === 'pct') {{ var cls = wasteColorClass(r.ytdPct); return '<span class="' + cls + '">' + fmtPct(r.ytdPct) + '</span>'; }}
+    if (metric === 'cost') return fmtCHF(r.ytdCost);
+    return fmt(r.ytdWasted);
+  }}
 
   var bodyHtml = '';
 
-  // Fridge rows
+  // ── Avg / Location row (TOP) ──
+  bodyHtml += '<tr class="avg-row"><td><div class="fridge-name">Avg / Location</div><div class="machine-name">' + rows.length + ' active locations</div></td>';
+  avgWeekValues.forEach(function(av) {{
+    if (mode !== 'sequential') {{
+      if (metric === 'pct') {{
+        var cls = deltaClass(av.deltaPct, true);
+        bodyHtml += '<td class="' + cls + '">' + fmtDelta(av.deltaPct) + ' <span style="color:#555;font-size:10px">(' + av.active + ')</span></td>';
+      }} else if (metric === 'cost') {{
+        var cls = deltaClass(av.deltaCost, true);
+        bodyHtml += '<td class="' + cls + '">' + fmtDeltaCHF(Math.round(av.deltaCost)) + ' <span style="color:#555;font-size:10px">(' + av.active + ')</span></td>';
+      }} else {{
+        var cls = deltaClass(av.deltaUnits, true);
+        bodyHtml += '<td class="' + cls + '">' + (av.deltaUnits >= 0 ? '+' : '') + fmt(Math.round(av.deltaUnits)) + ' <span style="color:#555;font-size:10px">(' + av.active + ')</span></td>';
+      }}
+    }} else {{
+      if (metric === 'pct') {{
+        var cls = wasteColorClass(av.pct);
+        var barW = Math.min(av.pct * 2, 100);
+        bodyHtml += '<td class="' + cls + '">' + fmtPct(av.pct) + '<span class="waste-bar" style="width:' + barW + 'px;background:' + wasteColor(av.pct) + '"></span> <span style="color:#555;font-size:10px">(' + av.active + ')</span></td>';
+      }} else if (metric === 'cost') {{
+        bodyHtml += '<td>' + fmtCHF(Math.round(av.cost)) + ' <span style="color:#555;font-size:10px">(' + av.active + ')</span></td>';
+      }} else {{
+        bodyHtml += '<td>' + fmt(Math.round(av.wasted)) + ' <span style="color:#555;font-size:10px">(' + av.active + ')</span></td>';
+      }}
+    }}
+  }});
+  // Avg YTD
+  if (mode === 'yoy') {{
+    if (metric === 'pct') {{ var cls = deltaClass(gYtdDeltaPct, true); bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtDelta(gYtdDeltaPct) + '</td>'; }}
+    else if (metric === 'cost') {{ bodyHtml += '<td class="ytd-col">' + fmtCHF(Math.round(avgYtdCost)) + '</td>'; }}
+    else {{ bodyHtml += '<td class="ytd-col">' + fmt(Math.round(avgYtdWasted)) + '</td>'; }}
+  }} else {{
+    if (metric === 'pct') {{ var cls = wasteColorClass(avgYtdPct); bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtPct(avgYtdPct) + '</td>'; }}
+    else if (metric === 'cost') {{ bodyHtml += '<td class="ytd-col">' + fmtCHF(Math.round(avgYtdCost)) + '</td>'; }}
+    else {{ bodyHtml += '<td class="ytd-col">' + fmt(Math.round(avgYtdWasted)) + '</td>'; }}
+  }}
+  bodyHtml += '</tr>';
+
+  // ── Location rows ──
   rows.forEach(function(r) {{
     bodyHtml += '<tr><td><div class="fridge-name">' + r.venue + '</div></td>';
     r.weekValues.forEach(function(wv) {{
-      if (mode !== 'sequential') {{
-        // Delta mode
-        if (metric === 'pct') {{
-          var cls = deltaClass(wv.deltaPct, true);
-          bodyHtml += '<td class="' + cls + '">' + fmtDelta(wv.deltaPct) + '</td>';
-        }} else if (metric === 'cost') {{
-          var cls = deltaClass(wv.deltaCost, true);
-          bodyHtml += '<td class="' + cls + '">' + fmtDeltaCHF(wv.deltaCost) + '</td>';
-        }} else {{
-          var cls = deltaClass(wv.deltaUnits, true);
-          bodyHtml += '<td class="' + cls + '">' + (wv.deltaUnits >= 0 ? '+' : '') + fmt(wv.deltaUnits) + '</td>';
-        }}
-      }} else {{
-        // Sequential mode
-        if (metric === 'pct') {{
-          var cls = wasteColorClass(wv.pct);
-          var barW = Math.min(wv.pct * 2, 100);
-          bodyHtml += '<td class="' + cls + '">' + fmtPct(wv.pct) + '<span class="waste-bar" style="width:' + barW + 'px;background:' + wasteColor(wv.pct) + '"></span></td>';
-        }} else if (metric === 'cost') {{
-          bodyHtml += '<td>' + fmtCHF(wv.cost) + '</td>';
-        }} else {{
-          bodyHtml += '<td>' + fmt(wv.wasted) + '</td>';
-        }}
-      }}
+      bodyHtml += '<td>' + wasteCellHtml(wv) + '</td>';
     }});
-
-    // YTD
-    if (mode === 'yoy') {{
-      if (metric === 'pct') {{
-        var cls = deltaClass(r.ytdDeltaPct, true);
-        bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtDelta(r.ytdDeltaPct) + '</td>';
-      }} else if (metric === 'cost') {{
-        var cls = deltaClass(r.ytdDeltaCost, true);
-        bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtDeltaCHF(r.ytdDeltaCost) + '</td>';
-      }} else {{
-        var cls = deltaClass(r.ytdDeltaUnits, true);
-        bodyHtml += '<td class="ytd-col ' + cls + '">' + (r.ytdDeltaUnits >= 0 ? '+' : '') + fmt(r.ytdDeltaUnits) + '</td>';
-      }}
-    }} else {{
-      if (metric === 'pct') {{
-        var cls = wasteColorClass(r.ytdPct);
-        bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtPct(r.ytdPct) + '</td>';
-      }} else if (metric === 'cost') {{
-        bodyHtml += '<td class="ytd-col">' + fmtCHF(r.ytdCost) + '</td>';
-      }} else {{
-        bodyHtml += '<td class="ytd-col">' + fmt(r.ytdWasted) + '</td>';
-      }}
-    }}
-    bodyHtml += '</tr>';
+    bodyHtml += '<td class="ytd-col">' + wasteYtdCellHtml(r) + '</td></tr>';
   }});
 
-  // Global row
+  // ── Global Total row (BOTTOM) ──
   bodyHtml += '<tr class="global-row"><td><div class="fridge-name">Global Total</div><div class="machine-name">All ' + rows.length + ' locations</div></td>';
   globalWeekValues.forEach(function(gv) {{
-    if (mode !== 'sequential') {{
-      if (metric === 'pct') {{
-        var cls = deltaClass(gv.deltaPct, true);
-        bodyHtml += '<td class="' + cls + '">' + fmtDelta(gv.deltaPct) + '</td>';
-      }} else if (metric === 'cost') {{
-        var cls = deltaClass(gv.deltaCost, true);
-        bodyHtml += '<td class="' + cls + '">' + fmtDeltaCHF(gv.deltaCost) + '</td>';
-      }} else {{
-        var cls = deltaClass(gv.deltaUnits, true);
-        bodyHtml += '<td class="' + cls + '">' + (gv.deltaUnits >= 0 ? '+' : '') + fmt(gv.deltaUnits) + '</td>';
-      }}
-    }} else {{
-      if (metric === 'pct') {{
-        var cls = wasteColorClass(gv.pct);
-        var barW = Math.min(gv.pct * 2, 100);
-        bodyHtml += '<td class="' + cls + '">' + fmtPct(gv.pct) + '<span class="waste-bar" style="width:' + barW + 'px;background:' + wasteColor(gv.pct) + '"></span></td>';
-      }} else if (metric === 'cost') {{
-        bodyHtml += '<td>' + fmtCHF(gv.cost) + '</td>';
-      }} else {{
-        bodyHtml += '<td>' + fmt(gv.wasted) + '</td>';
-      }}
-    }}
+    bodyHtml += '<td>' + wasteCellHtml(gv) + '</td>';
   }});
-
   // Global YTD
   if (mode === 'yoy') {{
-    if (metric === 'pct') {{
-      var cls = deltaClass(gYtdDeltaPct, true);
-      bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtDelta(gYtdDeltaPct) + '</td>';
-    }} else if (metric === 'cost') {{
-      var cls = deltaClass(gYtdDeltaCost, true);
-      bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtDeltaCHF(gYtdDeltaCost) + '</td>';
-    }} else {{
-      var cls = deltaClass(gYtdDeltaUnits, true);
-      bodyHtml += '<td class="ytd-col ' + cls + '">' + (gYtdDeltaUnits >= 0 ? '+' : '') + fmt(gYtdDeltaUnits) + '</td>';
-    }}
+    if (metric === 'pct') {{ var cls = deltaClass(gYtdDeltaPct, true); bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtDelta(gYtdDeltaPct) + '</td>'; }}
+    else if (metric === 'cost') {{ var cls = deltaClass(gYtdDeltaCost, true); bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtDeltaCHF(gYtdDeltaCost) + '</td>'; }}
+    else {{ var cls = deltaClass(gYtdDeltaUnits, true); bodyHtml += '<td class="ytd-col ' + cls + '">' + (gYtdDeltaUnits >= 0 ? '+' : '') + fmt(gYtdDeltaUnits) + '</td>'; }}
   }} else {{
-    if (metric === 'pct') {{
-      var cls = wasteColorClass(gYtdPct);
-      bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtPct(gYtdPct) + '</td>';
-    }} else if (metric === 'cost') {{
-      bodyHtml += '<td class="ytd-col">' + fmtCHF(gYtdCost) + '</td>';
-    }} else {{
-      bodyHtml += '<td class="ytd-col">' + fmt(gYtdWasted) + '</td>';
-    }}
+    if (metric === 'pct') {{ var cls = wasteColorClass(gYtdPct); bodyHtml += '<td class="ytd-col ' + cls + '">' + fmtPct(gYtdPct) + '</td>'; }}
+    else if (metric === 'cost') {{ bodyHtml += '<td class="ytd-col">' + fmtCHF(gYtdCost) + '</td>'; }}
+    else {{ bodyHtml += '<td class="ytd-col">' + fmt(gYtdWasted) + '</td>'; }}
   }}
   bodyHtml += '</tr>';
 
