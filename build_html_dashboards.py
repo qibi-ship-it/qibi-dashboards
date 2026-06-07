@@ -304,9 +304,25 @@ function render() {{
 
   var venueMap = salesData;
 
-  // ── 2. Display ALL weeks (horizontally scrollable) ──
-  var displayWeeks = weeks;
+  // ── 2. Determine display weeks ──
+  var displayWeeks = [];
   var weeks2026 = weeks.filter(function(w) {{ return w.startsWith('2026-'); }});
+  var last12 = weeks.slice(-12);
+
+  function weekHasData(wk) {{
+    var total = 0;
+    Object.keys(venueMap).forEach(function(v) {{
+      total += getWV(venueMap[v].weeks[wk]).u;
+    }});
+    return total > 0;
+  }}
+
+  if (mode === 'sequential') {{
+    displayWeeks = last12;
+  }} else {{
+    // YoY & Cumulative: show ALL 2026 weeks that have data
+    displayWeeks = weeks2026.filter(weekHasData);
+  }}
 
   // ── 3. Build venue rows ──
   var rows = [];
@@ -333,7 +349,7 @@ function render() {{
       }});
 
       var tyR = 0, lyR = 0, tyU = 0, lyU = 0;
-      weeks2026.forEach(function(wk) {{
+      weeks2026.filter(weekHasData).forEach(function(wk) {{
         var d = getWV(vd.weeks[wk]);
         tyR += d.r; tyU += d.u;
         var lyWk = getMatchingWeekLastYear(wk);
@@ -706,8 +722,18 @@ function render() {{
     return cc ? {{i: cc.i || 0, w: cc.w || 0, c: cc.c || 0}} : {{i:0, w:0, c:0}};
   }}
 
-  // Display ALL weeks (horizontally scrollable)
-  var displayWeeks = weeks;
+  // Determine display weeks
+  var displayWeeks = [];
+  var last12 = weeks.slice(-12);
+
+  if (mode === 'sequential') {{
+    displayWeeks = last12;
+  }} else if (mode === 'yoy') {{
+    displayWeeks = weeks.filter(function(w) {{ return w.startsWith('2026-'); }});
+    if (displayWeeks.length > 12) displayWeeks = displayWeeks.slice(-12);
+  }} else if (mode === 'pop') {{
+    displayWeeks = last12;
+  }}
 
   // Build venue rows
   var rows = [];
