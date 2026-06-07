@@ -18,25 +18,32 @@ DATA_JSON = json.dumps(DATA, ensure_ascii=False)
 # ============================================================
 SHARED_CSS = """
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a0a;color:#fff;font-family:Inter,-apple-system,sans-serif;font-size:13px;line-height:1.5}
-.header{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid #1a1a1a}
+html,body{height:100vh;overflow:hidden}
+body{background:#0a0a0a;color:#fff;font-family:Inter,-apple-system,sans-serif;font-size:13px;line-height:1.5;display:flex;flex-direction:column}
+.header{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid #1a1a1a;flex-shrink:0}
 .header img{height:32px}
 .header h1{font-size:18px;font-weight:700}
 .header .meta{color:#888;font-size:12px}
-.controls{display:flex;flex-wrap:wrap;gap:10px;padding:16px 32px;border-bottom:1px solid #1a1a1a;align-items:center}
+.back-btn{display:flex;flex-direction:column;align-items:center;gap:4px;text-decoration:none;transition:transform 0.15s,opacity 0.15s;flex-shrink:0}
+.back-btn:hover{transform:scale(1.05);opacity:0.9}
+.back-btn .back-icon{width:44px;height:44px;border-radius:12px;background:#20ff00;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(32,255,0,0.25)}
+.back-btn .back-icon svg{width:22px;height:22px}
+.back-btn .back-label{font-size:10px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap}
+.controls{display:flex;flex-wrap:wrap;gap:10px;padding:16px 32px;border-bottom:1px solid #1a1a1a;align-items:center;flex-shrink:0}
 .controls select,.controls input{background:#1a1a1a;color:#fff;border:1px solid #333;border-radius:8px;padding:6px 12px;font-size:12px;font-family:inherit}
 .controls select:focus,.controls input:focus{outline:none;border-color:#20ff00}
 .controls label{color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
 .pill{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #333;color:#aaa;transition:all 0.2s}
 .pill.active{background:#20ff00;color:#000;border-color:#20ff00}
 .pill:hover{border-color:#20ff00}
-.content{padding:16px 32px}
-.table-wrap{overflow-x:auto;border-radius:14px;border:1px solid #1a1a1a;margin-top:12px}
+.content{padding:16px 32px;flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.table-wrap{overflow:auto;flex:1;min-height:0;border-radius:14px;border:1px solid #1a1a1a;margin-top:12px}
 table{width:100%;border-collapse:collapse;white-space:nowrap}
-thead th{background:#1a1a1a;color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:10px 12px;text-align:right;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none}
+thead th{background:#1a1a1a;color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:10px 12px;text-align:right;position:sticky;top:0;z-index:10;cursor:pointer;user-select:none}
 thead th:first-child{text-align:left;min-width:180px}
 thead th:hover{color:#20ff00}
 thead th .sort-arrow{margin-left:4px;font-size:10px;opacity:0.5}
+thead th .week-date{font-weight:400;font-size:9px;color:#555;display:block;line-height:1.2}
 thead th.sorted .sort-arrow{opacity:1;color:#20ff00}
 tbody td{padding:8px 12px;border-top:1px solid #1a1a1a;text-align:right;font-variant-numeric:tabular-nums}
 tbody td:first-child{text-align:left;font-weight:500;position:sticky;left:0;background:#0a0a0a;z-index:1}
@@ -46,10 +53,16 @@ tbody tr.global-row{background:#111;font-weight:700;border-top:2px solid #20ff00
 tbody tr.global-row td{color:#20ff00}
 tbody tr.global-row td:first-child{background:#111}
 tbody tr.avg-row{background:#0d0d0d;border-top:1px solid #333}
-tbody tr.avg-row td{color:#888;font-style:italic}
-tbody tr.avg-row td:first-child{background:#0d0d0d}
-thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
-.ytd-col{background:rgba(32,255,0,0.05)}
+tbody tr.avg-row td{color:#888;font-style:italic;position:sticky;top:48px;z-index:8;background:#0d0d0d}
+tbody tr.avg-row td:first-child{position:sticky;left:0;top:48px;z-index:9;background:#0d0d0d}
+tbody tr.avg-row:hover td{background:#0d0d0d}
+tbody tr.avg-row:hover td:first-child{background:#0d0d0d}
+thead th:first-child{position:sticky;left:0;z-index:12;background:#1a1a1a}
+thead th.ytd-col{position:sticky;right:0;z-index:13;background:#1a1a1a;box-shadow:-2px 0 4px rgba(0,0,0,0.4)}
+tbody td.ytd-col{position:sticky;right:0;z-index:2;background:#0a0a0a;box-shadow:-2px 0 4px rgba(0,0,0,0.4)}
+tbody tr:hover td.ytd-col{background:#1a1a1a}
+tbody tr.global-row td.ytd-col{background:#111}
+tbody tr.avg-row td.ytd-col{background:#0d0d0d}
 .green{color:#20ff00}
 .red{color:#ff4444}
 .orange{color:#ff9900}
@@ -57,14 +70,14 @@ thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
 .new-tag{color:#20ff00;font-size:10px;font-weight:700;letter-spacing:1px}
 .fridge-name{font-size:15px;font-weight:700;color:#fff}
 .machine-name{font-size:11px;color:#666;font-weight:400;margin-top:1px}
-.summary-cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.summary-cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;flex-shrink:0}
 .summary-card{background:#111;border:1px solid #1a1a1a;border-radius:14px;padding:16px 20px;min-width:180px;flex:1}
 .summary-card .label{color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
 .summary-card .value{font-size:24px;font-weight:700;margin-top:4px}
 .summary-card .sub{color:#888;font-size:12px;margin-top:2px}
 .l4l-controls{display:flex;gap:8px;align-items:center}
 #searchInput{width:200px}
-.footer{text-align:center;padding:24px;color:#555;font-size:11px;border-top:1px solid #1a1a1a;margin-top:24px}
+.footer{text-align:center;padding:12px;color:#555;font-size:11px;border-top:1px solid #1a1a1a;flex-shrink:0}
 .waste-bar{display:inline-block;height:6px;border-radius:3px;vertical-align:middle;margin-left:4px}
 .delta-pos{color:#20ff00}
 .delta-neg{color:#ff4444}
@@ -111,22 +124,43 @@ function getMatchingWeekLastYear(wk) {
   return (p[0]-1) + '-W' + String(p[1]).padStart(2,'0');
 }
 
+function getWeekMonday(wk) {
+  var parts = wk.split('-W');
+  var year = parseInt(parts[0]);
+  var week = parseInt(parts[1]);
+  var jan4 = new Date(year, 0, 4);
+  var dow = jan4.getDay() || 7;
+  var w1Mon = new Date(year, 0, 4 - dow + 1);
+  var target = new Date(w1Mon.getTime() + (week - 1) * 7 * 86400000);
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[target.getMonth()] + ' ' + target.getDate();
+}
+
 var currentMode = 'sequential';
 var sortCol = null;
 var sortDir = 'desc';
 
-function toggleLocPanel() {
-  var p = document.getElementById('locPanel');
-  p.classList.toggle('open');
+function weekHasData(wk) {
+  return DATA.meta.weeks.indexOf(wk) !== -1;
 }
-function locSelectAll() {
-  document.querySelectorAll('.loc-cb').forEach(function(cb) { cb.checked = true; });
-  updateLocBtn(); render();
+
+// ── Checkbox panel helpers (Location, Category, Year) ──
+function _togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
+function _selectAll(cls) { document.querySelectorAll('.' + cls).forEach(function(cb) { cb.checked = true; }); }
+function _deselectAll(cls) { document.querySelectorAll('.' + cls).forEach(function(cb) { cb.checked = false; }); }
+function _getSelected(cls) {
+  var all = document.querySelectorAll('.' + cls);
+  var checked = document.querySelectorAll('.' + cls + ':checked');
+  if (checked.length === 0 || checked.length === all.length) return null;
+  var out = [];
+  checked.forEach(function(cb) { out.push(cb.value); });
+  return out;
 }
-function locDeselectAll() {
-  document.querySelectorAll('.loc-cb').forEach(function(cb) { cb.checked = false; });
-  updateLocBtn(); render();
-}
+
+// Location panel
+function toggleLocPanel() { _togglePanel('locPanel'); }
+function locSelectAll() { _selectAll('loc-cb'); updateLocBtn(); render(); }
+function locDeselectAll() { _deselectAll('loc-cb'); updateLocBtn(); render(); }
 function onLocChange() { updateLocBtn(); render(); }
 function updateLocBtn() {
   var all = document.querySelectorAll('.loc-cb');
@@ -138,18 +172,51 @@ function updateLocBtn() {
     btn.textContent = 'Locations (' + checked.length + '/' + all.length + ')';
   }
 }
-function getSelectedLocs() {
-  var all = document.querySelectorAll('.loc-cb');
-  var checked = document.querySelectorAll('.loc-cb:checked');
-  if (checked.length === 0 || checked.length === all.length) return null; // null = all
-  var out = [];
-  checked.forEach(function(cb) { out.push(cb.value); });
-  return out;
+function getSelectedLocs() { return _getSelected('loc-cb'); }
+
+// Category panel
+function toggleCatPanel() { _togglePanel('catPanel'); }
+function catSelectAll() { _selectAll('cat-cb'); updateCatBtn(); render(); }
+function catDeselectAll() { _deselectAll('cat-cb'); updateCatBtn(); render(); }
+function onCatChange() { updateCatBtn(); render(); }
+function updateCatBtn() {
+  var all = document.querySelectorAll('.cat-cb');
+  var checked = document.querySelectorAll('.cat-cb:checked');
+  var btn = document.getElementById('catBtn');
+  if (checked.length === 0 || checked.length === all.length) {
+    btn.textContent = 'All Categories (' + all.length + ')';
+  } else {
+    btn.textContent = 'Categories (' + checked.length + '/' + all.length + ')';
+  }
 }
+function getSelectedCats() { return _getSelected('cat-cb'); }
+
+// Year panel
+function toggleYearPanel() { _togglePanel('yearPanel'); }
+function yearSelectAll() { _selectAll('year-cb'); updateYearBtn(); render(); }
+function yearDeselectAll() { _deselectAll('year-cb'); updateYearBtn(); render(); }
+function onYearChange() { updateYearBtn(); render(); }
+function updateYearBtn() {
+  var all = document.querySelectorAll('.year-cb');
+  var checked = document.querySelectorAll('.year-cb:checked');
+  var btn = document.getElementById('yearBtn');
+  if (checked.length === 0 || checked.length === all.length) {
+    btn.textContent = 'All Years (' + all.length + ')';
+  } else {
+    var names = [];
+    checked.forEach(function(cb) { names.push(cb.value); });
+    btn.textContent = names.join(', ');
+  }
+}
+function getSelectedYears() { return _getSelected('year-cb'); }
+
+// Close any open panel on outside click
 document.addEventListener('click', function(e) {
-  var p = document.getElementById('locPanel');
-  var b = document.getElementById('locBtn');
-  if (p && !p.contains(e.target) && e.target !== b) p.classList.remove('open');
+  [['locPanel','locBtn'],['catPanel','catBtn'],['yearPanel','yearBtn']].forEach(function(pair) {
+    var p = document.getElementById(pair[0]);
+    var b = document.getElementById(pair[1]);
+    if (p && !p.contains(e.target) && e.target !== b) p.classList.remove('open');
+  });
 });
 
 function setMode(el) {
@@ -175,13 +242,21 @@ function toggleSort(colIdx) {
 # ============================================================
 # HEADER HTML
 # ============================================================
+BACK_BUTTON_HTML = """<a href="index.html" class="back-btn">
+  <div class="back-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></div>
+  <span class="back-label">All Dashboards</span>
+</a>"""
+
 def build_header(title, meta_text):
     return f"""<div class="header">
   <div style="display:flex;align-items:center;gap:12px">
     <img src="data:image/svg+xml;base64,{QIBI_LOGO_BASE64}" alt="QiBi">
-    <h1>{title}</h1>
+    <div>
+      <h1>{title}</h1>
+      <div class="meta">{meta_text}</div>
+    </div>
   </div>
-  <div class="meta">{meta_text}</div>
+  {BACK_BUTTON_HTML}
 </div>"""
 
 # ============================================================
@@ -203,24 +278,42 @@ def build_location_panel(venues):
 # CATEGORY FILTER BUILDER (shared by both dashboards)
 # ============================================================
 def build_category_filter(categories):
-    """Build the category dropdown select HTML"""
-    html = '<div>\n  <label>Category</label><br>\n  <select id="catFilter" onchange="render()">\n'
-    html += '    <option value="all">All Categories</option>\n'
-    for cat in sorted(categories):
-        html += f'    <option value="{cat}">{cat}</option>\n'
-    html += '  </select>\n</div>'
+    """Build the category checkbox dropdown panel HTML"""
+    cats = sorted(categories) if categories else []
+    html = '<div>\n  <label>Category</label><br>\n  <div class="loc-dropdown">\n'
+    html += f'    <button id="catBtn" class="loc-btn" onclick="toggleCatPanel()">All Categories ({len(cats)})</button>\n'
+    html += '    <div id="catPanel" class="loc-panel">\n'
+    html += '      <div class="loc-actions"><button onclick="catSelectAll()">Select All</button><button onclick="catDeselectAll()">Deselect All</button></div>\n'
+    for cat in cats:
+        html += f'      <label><input type="checkbox" class="cat-cb" value="{cat}" checked onchange="onCatChange()">{cat}</label>\n'
+    html += '    </div>\n  </div>\n</div>'
     return html
 
 # ============================================================
 # YEAR FILTER BUILDER (shared by both dashboards)
 # ============================================================
 def build_year_filter(weeks):
-    """Build the year dropdown — current year is default"""
+    """Build the year checkbox dropdown panel HTML — current year checked by default"""
     years = sorted(set(w.split('-')[0] for w in weeks), reverse=True)
-    html = '<div>\n  <label>Year</label><br>\n  <select id="yearFilter" onchange="render()">\n'
+    current_year = years[0] if years else '2026'
+    html = '<div>\n  <label>Year</label><br>\n  <div class="loc-dropdown">\n'
+    html += f'    <button id="yearBtn" class="loc-btn" onclick="toggleYearPanel()">{current_year}</button>\n'
+    html += '    <div id="yearPanel" class="loc-panel">\n'
+    html += '      <div class="loc-actions"><button onclick="yearSelectAll()">Select All</button><button onclick="yearDeselectAll()">Deselect All</button></div>\n'
     for y in years:
-        html += f'    <option value="{y}">{y}</option>\n'
-    html += '    <option value="all">All Years</option>\n'
+        checked = ' checked' if y == current_year else ''
+        html += f'      <label><input type="checkbox" class="year-cb" value="{y}"{checked} onchange="onYearChange()">{y}</label>\n'
+    html += '    </div>\n  </div>\n</div>'
+    return html
+
+# ============================================================
+# FRIDGE FILTER BUILDER (All vs Active — excludes Office/Bureau/Team)
+# ============================================================
+def build_fridge_filter():
+    """Build All/Active fridges dropdown"""
+    html = '<div>\n  <label>Fridges</label><br>\n  <select id="fridgeFilter" onchange="render()">\n'
+    html += '    <option value="active">Active Fridges</option>\n'
+    html += '    <option value="all">All Fridges</option>\n'
     html += '  </select>\n</div>'
     return html
 
@@ -291,7 +384,7 @@ var DATA = {DATA_JSON};
 {SHARED_JS}
 
 function render() {{
-  var cat = document.getElementById('catFilter').value;
+  var selectedCats = getSelectedCats(); // null = all
   var selectedLocs = getSelectedLocs(); // null = all
   var show = document.getElementById('showFilter').value;
   var metric = document.getElementById('metricFilter').value;
@@ -306,31 +399,35 @@ function render() {{
   // Helper: extract values from a week entry, respecting category filter
   function getWV(weekEntry) {{
     if (!weekEntry) return {{u:0, r:0}};
-    if (cat === 'all') return {{u: weekEntry.u || 0, r: weekEntry.r || 0}};
-    var c = (weekEntry.cats || {{}})[cat];
-    return c ? {{u: c.u || 0, r: c.r || 0}} : {{u:0, r:0}};
+    if (!selectedCats) return {{u: weekEntry.u || 0, r: weekEntry.r || 0}};
+    var su=0, sr=0, cats = weekEntry.cats || {{}};
+    selectedCats.forEach(function(k) {{ var c = cats[k]; if (c) {{ su += c.u||0; sr += c.r||0; }} }});
+    return {{u: su, r: sr}};
   }}
   function getYTD(venueData) {{
-    if (cat === 'all') return {{u: venueData.ytd_u || 0, r: venueData.ytd_r || 0}};
-    var c = (venueData.ytd_cats || {{}})[cat];
-    return c ? {{u: c.u || 0, r: c.r || 0}} : {{u:0, r:0}};
+    if (!selectedCats) return {{u: venueData.ytd_u || 0, r: venueData.ytd_r || 0}};
+    var su=0, sr=0, cats = venueData.ytd_cats || {{}};
+    selectedCats.forEach(function(k) {{ var c = cats[k]; if (c) {{ su += c.u||0; sr += c.r||0; }} }});
+    return {{u: su, r: sr}};
   }}
 
   var venueMap = salesData;
+  var officeRe = /office|bureau|team/i;
+  var allVenueKeys = Object.keys(venueMap);
 
-  // ── 2. Determine display weeks (year filter) ──
-  var yearFilter = document.getElementById('yearFilter').value;
+  // ── 2. Determine display weeks (year filter — multi-select) ──
+  var selectedYears = getSelectedYears(); // null = all
   var displayWeeks;
-  if (yearFilter === 'all') {{
+  if (!selectedYears) {{
     displayWeeks = weeks;
   }} else {{
-    displayWeeks = weeks.filter(function(w) {{ return w.startsWith(yearFilter + '-'); }});
+    displayWeeks = weeks.filter(function(w) {{ return selectedYears.indexOf(w.split('-')[0]) !== -1; }});
   }}
   var weeks2026 = weeks.filter(function(w) {{ return w.startsWith('2026-'); }});
 
-  // ── 3. Build venue rows ──
+  // ── 3. Build venue rows (all venues — location checkboxes control visibility) ──
   var rows = [];
-  Object.keys(venueMap).forEach(function(venue) {{
+  allVenueKeys.forEach(function(venue) {{
     var vd = venueMap[venue];
 
     // Location checkbox filter
@@ -509,9 +606,31 @@ function render() {{
   var avgPerLocation = totalRev / activeLocCount;
   var avgPerWeek = totalRev / (weeks.length || 1);
 
+  // Active fridge count for card: ALL venues, excluding office — independent of table filters
+  var latestActiveWeek = null;
+  for (var li = displayWeeks.length - 1; li >= 0; li--) {{
+    var wk = displayWeeks[li];
+    var anyActive = false;
+    allVenueKeys.forEach(function(v) {{
+      var raw = getWV(venueMap[v].weeks[wk]);
+      if (raw.u > 0) anyActive = true;
+    }});
+    if (anyActive) {{ latestActiveWeek = wk; break; }}
+  }}
+  var activeFridges = 0;
+  if (latestActiveWeek) {{
+    allVenueKeys.forEach(function(v) {{
+      if (!officeRe.test(v)) {{
+        var raw = getWV(venueMap[v].weeks[latestActiveWeek]);
+        if (raw.u > 0) activeFridges++;
+      }}
+    }});
+  }}
+  var latestWkLabel = latestActiveWeek ? latestActiveWeek.replace(/^\\d{{4}}-/, '') : '—';
+
   var cardsHtml = '<div class="summary-cards">' +
     '<div class="summary-card"><div class="label">Total Revenue</div><div class="value green">' + fmtCHF(totalRev) + '</div><div class="sub">' + fmt(totalUnits) + ' units</div></div>' +
-    '<div class="summary-card"><div class="label">Locations</div><div class="value">' + activeLocCount + '</div></div>' +
+    '<div class="summary-card"><div class="label">Active Fridges</div><div class="value">' + activeFridges + '</div><div class="sub">' + latestWkLabel + ' (excl. office)</div></div>' +
     '<div class="summary-card"><div class="label">Avg / Location</div><div class="value">' + fmtCHF(avgPerLocation) + '</div></div>' +
     '<div class="summary-card"><div class="label">Avg / Week</div><div class="value">' + fmtCHF(avgPerWeek) + '</div></div>' +
     '</div>';
@@ -564,7 +683,8 @@ function render() {{
   displayWeeks.forEach(function(wk, i) {{
     var ci = i + 1;
     var label = wk.replace(/^\\d{{4}}-/, '');
-    headerHtml += '<th onclick="toggleSort(' + ci + ')">' + label + ' <span class="sort-arrow">' + sa(ci) + '</span></th>';
+    var dateLabel = getWeekMonday(wk);
+    headerHtml += '<th onclick="toggleSort(' + ci + ')">' + label + '<span class="week-date">' + dateLabel + '</span><span class="sort-arrow">' + sa(ci) + '</span></th>';
   }});
   var ytdCI = displayWeeks.length + 1;
   headerHtml += '<th class="ytd-col" onclick="toggleSort(' + ytdCI + ')">YTD <span class="sort-arrow">' + sa(ytdCI) + '</span></th></tr>';
@@ -618,6 +738,15 @@ function render() {{
 
   document.getElementById('mainContent').innerHTML = cardsHtml +
     '<div class="table-wrap"><table><thead>' + headerHtml + '</thead><tbody>' + bodyHtml + '</tbody></table></div>';
+
+  // Freeze panes: set avg-row sticky top to actual thead height
+  requestAnimationFrame(function() {{
+    var th = document.querySelector('.table-wrap thead');
+    if (th) {{
+      var h = th.offsetHeight;
+      document.querySelectorAll('.avg-row td').forEach(function(td) {{ td.style.top = h + 'px'; }});
+    }}
+  }});
 }}
 
 render();
@@ -705,7 +834,7 @@ function wasteColorClass(pct) {{
 }}
 
 function render() {{
-  var cat = document.getElementById('catFilter').value;
+  var selectedCats = getSelectedCats(); // null = all
   var selectedLocs = getSelectedLocs(); // null = all
   var show = document.getElementById('showFilter').value;
   var metric = document.getElementById('metricFilter').value;
@@ -713,32 +842,36 @@ function render() {{
 
   var wastageData = DATA.wastage.by_fridge;
   var weeks = DATA.meta.weeks;
+  var officeRe = /office|bureau|team/i;
+  var allVenueKeys = Object.keys(wastageData);
 
   // Helper: extract values from a week entry, respecting category filter
   function getWW(weekEntry) {{
     if (!weekEntry) return {{i:0, w:0, c:0}};
-    if (cat === 'all') return {{i: weekEntry.i || 0, w: weekEntry.w || 0, c: weekEntry.c || 0}};
-    var cc = (weekEntry.cats || {{}})[cat];
-    return cc ? {{i: cc.i || 0, w: cc.w || 0, c: cc.c || 0}} : {{i:0, w:0, c:0}};
+    if (!selectedCats) return {{i: weekEntry.i || 0, w: weekEntry.w || 0, c: weekEntry.c || 0}};
+    var si=0, sw=0, sc=0, cats = weekEntry.cats || {{}};
+    selectedCats.forEach(function(k) {{ var cc = cats[k]; if (cc) {{ si += cc.i||0; sw += cc.w||0; sc += cc.c||0; }} }});
+    return {{i: si, w: sw, c: sc}};
   }}
   function getWasteYTD(venueData) {{
-    if (cat === 'all') return {{i: venueData.ytd_i || 0, w: venueData.ytd_w || 0, c: venueData.ytd_c || 0}};
-    var cc = (venueData.ytd_cats || {{}})[cat];
-    return cc ? {{i: cc.i || 0, w: cc.w || 0, c: cc.c || 0}} : {{i:0, w:0, c:0}};
+    if (!selectedCats) return {{i: venueData.ytd_i || 0, w: venueData.ytd_w || 0, c: venueData.ytd_c || 0}};
+    var si=0, sw=0, sc=0, cats = venueData.ytd_cats || {{}};
+    selectedCats.forEach(function(k) {{ var cc = cats[k]; if (cc) {{ si += cc.i||0; sw += cc.w||0; sc += cc.c||0; }} }});
+    return {{i: si, w: sw, c: sc}};
   }}
 
-  // Display weeks (year filter)
-  var yearFilter = document.getElementById('yearFilter').value;
+  // Display weeks (year filter — multi-select)
+  var selectedYears = getSelectedYears(); // null = all
   var displayWeeks;
-  if (yearFilter === 'all') {{
+  if (!selectedYears) {{
     displayWeeks = weeks;
   }} else {{
-    displayWeeks = weeks.filter(function(w) {{ return w.startsWith(yearFilter + '-'); }});
+    displayWeeks = weeks.filter(function(w) {{ return selectedYears.indexOf(w.split('-')[0]) !== -1; }});
   }}
 
-  // Build venue rows
+  // Build venue rows (all venues — location checkboxes control visibility)
   var rows = [];
-  Object.keys(wastageData).forEach(function(venue) {{
+  allVenueKeys.forEach(function(venue) {{
     var fd = wastageData[venue];
 
     // Location checkbox filter
@@ -927,12 +1060,34 @@ function render() {{
   var avgYtdCost = gYtdCost / avgLocCount;
   var avgYtdWasted = gYtdWasted / avgLocCount;
 
+  // Active fridge count for card: ALL venues, excluding office — independent of table filters
+  var latestActiveWeek = null;
+  for (var li = displayWeeks.length - 1; li >= 0; li--) {{
+    var wk = displayWeeks[li];
+    var anyActive = false;
+    allVenueKeys.forEach(function(v) {{
+      var raw = getWW(wastageData[v].weeks[wk]);
+      if (raw.i > 0) anyActive = true;
+    }});
+    if (anyActive) {{ latestActiveWeek = wk; break; }}
+  }}
+  var activeFridges = 0;
+  if (latestActiveWeek) {{
+    allVenueKeys.forEach(function(v) {{
+      if (!officeRe.test(v)) {{
+        var raw = getWW(wastageData[v].weeks[latestActiveWeek]);
+        if (raw.i > 0) activeFridges++;
+      }}
+    }});
+  }}
+  var latestWkLabel = latestActiveWeek ? latestActiveWeek.replace(/^\\d{{4}}-/, '') : '—';
+
   // Summary cards (filter-aware)
   var cardsHtml = '<div class="summary-cards">' +
     '<div class="summary-card"><div class="label">Total Introduced</div><div class="value">' + fmt(gYtdIntro) + '</div></div>' +
     '<div class="summary-card"><div class="label">Total Wasted</div><div class="value red">' + fmt(gYtdWasted) + '</div><div class="sub">' + fmtPct(gYtdPct) + ' waste rate</div></div>' +
     '<div class="summary-card"><div class="label">Waste Cost (COGS)</div><div class="value orange">' + fmtCHF(gYtdCost) + '</div></div>' +
-    '<div class="summary-card"><div class="label">Locations</div><div class="value">' + rows.length + '</div></div>' +
+    '<div class="summary-card"><div class="label">Active Fridges</div><div class="value">' + activeFridges + '</div><div class="sub">' + latestWkLabel + ' (excl. office)</div></div>' +
     '</div>';
 
   // Build table header
@@ -941,7 +1096,8 @@ function render() {{
   displayWeeks.forEach(function(wk, i) {{
     var colIdx = i + 1;
     var label = wk.replace(/^\\d{{4}}-/, '');
-    headerHtml += '<th onclick="toggleSort(' + colIdx + ')">' + label + ' <span class="sort-arrow">' + sa(colIdx) + '</span></th>';
+    var dateLabel = getWeekMonday(wk);
+    headerHtml += '<th onclick="toggleSort(' + colIdx + ')">' + label + '<span class="week-date">' + dateLabel + '</span><span class="sort-arrow">' + sa(colIdx) + '</span></th>';
   }});
   var ytdColIdx = displayWeeks.length + 1;
   headerHtml += '<th class="ytd-col" onclick="toggleSort(' + ytdColIdx + ')">YTD <span class="sort-arrow">' + sa(ytdColIdx) + '</span></th></tr>';
@@ -1051,6 +1207,15 @@ function render() {{
 
   document.getElementById('mainContent').innerHTML = cardsHtml +
     '<div class="table-wrap"><table><thead>' + headerHtml + '</thead><tbody>' + bodyHtml + '</tbody></table></div>';
+
+  // Freeze panes: set avg-row sticky top to actual thead height
+  requestAnimationFrame(function() {{
+    var th = document.querySelector('.table-wrap thead');
+    if (th) {{
+      var h = th.offsetHeight;
+      document.querySelectorAll('.avg-row td').forEach(function(td) {{ td.style.top = h + 'px'; }});
+    }}
+  }});
 }}
 
 render();
