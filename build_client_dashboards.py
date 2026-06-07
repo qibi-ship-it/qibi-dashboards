@@ -157,32 +157,29 @@ def parse_vl_date(s):
 
 # ============================================================
 # STEP 1: PROCESS SALES — venue from each transaction row
-# EPC dedup: each tag_id is single-use; duplicates = tag read errors
+# Filter 1: skip rows where is_refunded has any value (autorefund or manual)
+# Filter 2: EPC dedup — all tags are single-use; if same EPC appears in
+#   multiple non-refunded rows, keep only the LATEST sale, discard earlier ones
 # ============================================================
 print("Step 1: Processing sales...")
-# Each sale: (week, venue, sku, product_name, cat_group, sub_cat, price, units)
 sales_data = []
-seen_sales_epcs = set()  # For deduplicating tag read errors
-sales_dedup_skipped = 0
+refund_skipped = 0
+
+# Two-pass approach: first collect all non-refunded rows with parsed data,
+# then deduplicate EPCs keeping latest timestamp
+pending_rows = []  # (dt, week, venue, sku, name, cat_group, sub_cat, price, tag_id)
 
 with open(SALES_FILE, "r", encoding="utf-8-sig") as f:
     for row in csv.DictReader(f):
-        if row.get("is_refunded","").strip() in ("automatic","manual_entry"):
+        refund_val = row.get("is_refunded","").strip()
+        if refund_val:  # any non-empty value = refunded, skip
+            refund_skipped += 1
             continue
 
         ts = row.get("timestamp","").strip()
         dt = parse_vl_date(ts)
         if not dt:
             continue
-
-        # EPC dedup: EPCs are single-use, so if the same tag_id appears
-        # in multiple sales rows, only the first is real (rest are tag read errors)
-        tag_id = row.get("item_tag_id","").strip()
-        if tag_id and tag_id != "-":
-            if tag_id in seen_sales_epcs:
-                sales_dedup_skipped += 1
-                continue
-            seen_sales_epcs.add(tag_id)
 
         sku = row.get("product__external_id","").strip()
         sku = SKU_FIXES.get(sku, sku)
@@ -202,12 +199,40 @@ with open(SALES_FILE, "r", encoding="utf-8-sig") as f:
         week = get_week_key(dt)
         cat_group = get_category_group(sku)
         sub_cat = get_sub_category(sku)
+        tag_id = row.get("item_tag_id","").strip()
 
-        # KEY: store venue (from this row), NOT a static fridge mapping
-        sales_data.append((week, venue, sku, name, cat_group, sub_cat, price, 1))
+        pending_rows.append((dt, week, venue, sku, name, cat_group, sub_cat, price, tag_id))
+
+# EPC dedup: for each EPC with multiple rows, keep only the LATEST (by timestamp)
+# Rows without EPC (empty or "-") pass through as-is
+epc_latest = {}  # tag_id → index in pending_rows (latest dt wins)
+no_epc_rows = []
+epc_dupes_discarded = 0
+
+for i, (dt, week, venue, sku, name, cat_group, sub_cat, price, tag_id) in enumerate(pending_rows):
+    if not tag_id or tag_id == "-":
+        no_epc_rows.append(i)
+    else:
+        if tag_id in epc_latest:
+            prev_i = epc_latest[tag_id]
+            prev_dt = pending_rows[prev_i][0]
+            if dt > prev_dt:
+                # Current is newer — replace, discard previous
+                epc_latest[tag_id] = i
+            # else: current is older — discard current
+            epc_dupes_discarded += 1
+        else:
+            epc_latest[tag_id] = i
+
+# Build final sales_data from kept rows
+kept_indices = set(no_epc_rows) | set(epc_latest.values())
+for i in sorted(kept_indices):
+    dt, week, venue, sku, name, cat_group, sub_cat, price, tag_id = pending_rows[i]
+    sales_data.append((week, venue, sku, name, cat_group, sub_cat, price, 1))
 
 print(f"  VendLive sales loaded: {len(sales_data):,} clean transactions")
-print(f"  Sales EPC dedup: {sales_dedup_skipped:,} tag read errors removed ({len(seen_sales_epcs):,} unique tags)")
+print(f"  Refunds skipped: {refund_skipped:,}")
+print(f"  EPC dupes discarded (earlier sales): {epc_dupes_discarded:,} ({len(epc_latest):,} unique EPCs)")
 
 # Also process Cryo sales (3593) — location IS the venue
 with open(CRYO_SALES_FILE, "r", encoding="utf-8-sig") as f:
