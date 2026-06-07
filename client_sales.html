@@ -96,12 +96,15 @@ thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
 <div class="controls">
   <div>
   <label>Year</label><br>
-  <select id="yearFilter" onchange="render()">
-    <option value="2026">2026</option>
-    <option value="2025">2025</option>
-    <option value="2024">2024</option>
-    <option value="all">All Years</option>
-  </select>
+  <div class="loc-dropdown">
+    <button id="yearBtn" class="loc-btn" onclick="toggleYearPanel()">2026</button>
+    <div id="yearPanel" class="loc-panel">
+      <div class="loc-actions"><button onclick="yearSelectAll()">Select All</button><button onclick="yearDeselectAll()">Deselect All</button></div>
+      <label><input type="checkbox" class="year-cb" value="2026" checked onchange="onYearChange()">2026</label>
+      <label><input type="checkbox" class="year-cb" value="2025" onchange="onYearChange()">2025</label>
+      <label><input type="checkbox" class="year-cb" value="2024" onchange="onYearChange()">2024</label>
+    </div>
+  </div>
 </div>
   <div>
   <label>Fridges</label><br>
@@ -112,14 +115,17 @@ thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
 </div>
   <div>
   <label>Category</label><br>
-  <select id="catFilter" onchange="render()">
-    <option value="all">All Categories</option>
-    <option value="Drinks">Drinks</option>
-    <option value="Fresh Food">Fresh Food</option>
-    <option value="Other">Other</option>
-    <option value="Savoury Snacks">Savoury Snacks</option>
-    <option value="Sweet Snacks">Sweet Snacks</option>
-  </select>
+  <div class="loc-dropdown">
+    <button id="catBtn" class="loc-btn" onclick="toggleCatPanel()">All Categories (5)</button>
+    <div id="catPanel" class="loc-panel">
+      <div class="loc-actions"><button onclick="catSelectAll()">Select All</button><button onclick="catDeselectAll()">Deselect All</button></div>
+      <label><input type="checkbox" class="cat-cb" value="Drinks" checked onchange="onCatChange()">Drinks</label>
+      <label><input type="checkbox" class="cat-cb" value="Fresh Food" checked onchange="onCatChange()">Fresh Food</label>
+      <label><input type="checkbox" class="cat-cb" value="Other" checked onchange="onCatChange()">Other</label>
+      <label><input type="checkbox" class="cat-cb" value="Savoury Snacks" checked onchange="onCatChange()">Savoury Snacks</label>
+      <label><input type="checkbox" class="cat-cb" value="Sweet Snacks" checked onchange="onCatChange()">Sweet Snacks</label>
+    </div>
+  </div>
 </div>
   <div>
     <label>Locations</label><br>
@@ -276,18 +282,23 @@ function weekHasData(wk) {
   return DATA.meta.weeks.indexOf(wk) !== -1;
 }
 
-function toggleLocPanel() {
-  var p = document.getElementById('locPanel');
-  p.classList.toggle('open');
+// ── Checkbox panel helpers (Location, Category, Year) ──
+function _togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
+function _selectAll(cls) { document.querySelectorAll('.' + cls).forEach(function(cb) { cb.checked = true; }); }
+function _deselectAll(cls) { document.querySelectorAll('.' + cls).forEach(function(cb) { cb.checked = false; }); }
+function _getSelected(cls) {
+  var all = document.querySelectorAll('.' + cls);
+  var checked = document.querySelectorAll('.' + cls + ':checked');
+  if (checked.length === 0 || checked.length === all.length) return null;
+  var out = [];
+  checked.forEach(function(cb) { out.push(cb.value); });
+  return out;
 }
-function locSelectAll() {
-  document.querySelectorAll('.loc-cb').forEach(function(cb) { cb.checked = true; });
-  updateLocBtn(); render();
-}
-function locDeselectAll() {
-  document.querySelectorAll('.loc-cb').forEach(function(cb) { cb.checked = false; });
-  updateLocBtn(); render();
-}
+
+// Location panel
+function toggleLocPanel() { _togglePanel('locPanel'); }
+function locSelectAll() { _selectAll('loc-cb'); updateLocBtn(); render(); }
+function locDeselectAll() { _deselectAll('loc-cb'); updateLocBtn(); render(); }
 function onLocChange() { updateLocBtn(); render(); }
 function updateLocBtn() {
   var all = document.querySelectorAll('.loc-cb');
@@ -299,18 +310,51 @@ function updateLocBtn() {
     btn.textContent = 'Locations (' + checked.length + '/' + all.length + ')';
   }
 }
-function getSelectedLocs() {
-  var all = document.querySelectorAll('.loc-cb');
-  var checked = document.querySelectorAll('.loc-cb:checked');
-  if (checked.length === 0 || checked.length === all.length) return null; // null = all
-  var out = [];
-  checked.forEach(function(cb) { out.push(cb.value); });
-  return out;
+function getSelectedLocs() { return _getSelected('loc-cb'); }
+
+// Category panel
+function toggleCatPanel() { _togglePanel('catPanel'); }
+function catSelectAll() { _selectAll('cat-cb'); updateCatBtn(); render(); }
+function catDeselectAll() { _deselectAll('cat-cb'); updateCatBtn(); render(); }
+function onCatChange() { updateCatBtn(); render(); }
+function updateCatBtn() {
+  var all = document.querySelectorAll('.cat-cb');
+  var checked = document.querySelectorAll('.cat-cb:checked');
+  var btn = document.getElementById('catBtn');
+  if (checked.length === 0 || checked.length === all.length) {
+    btn.textContent = 'All Categories (' + all.length + ')';
+  } else {
+    btn.textContent = 'Categories (' + checked.length + '/' + all.length + ')';
+  }
 }
+function getSelectedCats() { return _getSelected('cat-cb'); }
+
+// Year panel
+function toggleYearPanel() { _togglePanel('yearPanel'); }
+function yearSelectAll() { _selectAll('year-cb'); updateYearBtn(); render(); }
+function yearDeselectAll() { _deselectAll('year-cb'); updateYearBtn(); render(); }
+function onYearChange() { updateYearBtn(); render(); }
+function updateYearBtn() {
+  var all = document.querySelectorAll('.year-cb');
+  var checked = document.querySelectorAll('.year-cb:checked');
+  var btn = document.getElementById('yearBtn');
+  if (checked.length === 0 || checked.length === all.length) {
+    btn.textContent = 'All Years (' + all.length + ')';
+  } else {
+    var names = [];
+    checked.forEach(function(cb) { names.push(cb.value); });
+    btn.textContent = names.join(', ');
+  }
+}
+function getSelectedYears() { return _getSelected('year-cb'); }
+
+// Close any open panel on outside click
 document.addEventListener('click', function(e) {
-  var p = document.getElementById('locPanel');
-  var b = document.getElementById('locBtn');
-  if (p && !p.contains(e.target) && e.target !== b) p.classList.remove('open');
+  [['locPanel','locBtn'],['catPanel','catBtn'],['yearPanel','yearBtn']].forEach(function(pair) {
+    var p = document.getElementById(pair[0]);
+    var b = document.getElementById(pair[1]);
+    if (p && !p.contains(e.target) && e.target !== b) p.classList.remove('open');
+  });
 });
 
 function setMode(el) {
@@ -334,7 +378,7 @@ function toggleSort(colIdx) {
 
 
 function render() {
-  var cat = document.getElementById('catFilter').value;
+  var selectedCats = getSelectedCats(); // null = all
   var selectedLocs = getSelectedLocs(); // null = all
   var show = document.getElementById('showFilter').value;
   var metric = document.getElementById('metricFilter').value;
@@ -349,14 +393,16 @@ function render() {
   // Helper: extract values from a week entry, respecting category filter
   function getWV(weekEntry) {
     if (!weekEntry) return {u:0, r:0};
-    if (cat === 'all') return {u: weekEntry.u || 0, r: weekEntry.r || 0};
-    var c = (weekEntry.cats || {})[cat];
-    return c ? {u: c.u || 0, r: c.r || 0} : {u:0, r:0};
+    if (!selectedCats) return {u: weekEntry.u || 0, r: weekEntry.r || 0};
+    var su=0, sr=0, cats = weekEntry.cats || {};
+    selectedCats.forEach(function(k) { var c = cats[k]; if (c) { su += c.u||0; sr += c.r||0; } });
+    return {u: su, r: sr};
   }
   function getYTD(venueData) {
-    if (cat === 'all') return {u: venueData.ytd_u || 0, r: venueData.ytd_r || 0};
-    var c = (venueData.ytd_cats || {})[cat];
-    return c ? {u: c.u || 0, r: c.r || 0} : {u:0, r:0};
+    if (!selectedCats) return {u: venueData.ytd_u || 0, r: venueData.ytd_r || 0};
+    var su=0, sr=0, cats = venueData.ytd_cats || {};
+    selectedCats.forEach(function(k) { var c = cats[k]; if (c) { su += c.u||0; sr += c.r||0; } });
+    return {u: su, r: sr};
   }
 
   var venueMap = salesData;
@@ -369,13 +415,13 @@ function render() {
     ? allVenueKeys.filter(function(v) { return !officeRe.test(v); })
     : allVenueKeys;
 
-  // ── 2. Determine display weeks (year filter) ──
-  var yearFilter = document.getElementById('yearFilter').value;
+  // ── 2. Determine display weeks (year filter — multi-select) ──
+  var selectedYears = getSelectedYears(); // null = all
   var displayWeeks;
-  if (yearFilter === 'all') {
+  if (!selectedYears) {
     displayWeeks = weeks;
   } else {
-    displayWeeks = weeks.filter(function(w) { return w.startsWith(yearFilter + '-'); });
+    displayWeeks = weeks.filter(function(w) { return selectedYears.indexOf(w.split('-')[0]) !== -1; });
   }
   var weeks2026 = weeks.filter(function(w) { return w.startsWith('2026-'); });
 
