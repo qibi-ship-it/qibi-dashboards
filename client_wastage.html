@@ -109,13 +109,6 @@ thead th:first-child{position:sticky;left:0;z-index:12;background:#1a1a1a}
   </div>
 </div>
   <div>
-  <label>Fridges</label><br>
-  <select id="fridgeFilter" onchange="render()">
-    <option value="active">Active Fridges</option>
-    <option value="all">All Fridges</option>
-  </select>
-</div>
-  <div>
   <label>Category</label><br>
   <div class="loc-dropdown">
     <button id="catBtn" class="loc-btn" onclick="toggleCatPanel()">All Categories (5)</button>
@@ -400,14 +393,8 @@ function render() {
 
   var wastageData = DATA.wastage.by_fridge;
   var weeks = DATA.meta.weeks;
-
-  // Fridge filter: exclude Office/Bureau/Team
-  var fridgeFilter = document.getElementById('fridgeFilter').value;
   var officeRe = /office|bureau|team/i;
   var allVenueKeys = Object.keys(wastageData);
-  var filteredVenueKeys = fridgeFilter === 'active'
-    ? allVenueKeys.filter(function(v) { return !officeRe.test(v); })
-    : allVenueKeys;
 
   // Helper: extract values from a week entry, respecting category filter
   function getWW(weekEntry) {
@@ -433,9 +420,9 @@ function render() {
     displayWeeks = weeks.filter(function(w) { return selectedYears.indexOf(w.split('-')[0]) !== -1; });
   }
 
-  // Build venue rows
+  // Build venue rows (all venues — location checkboxes control visibility)
   var rows = [];
-  filteredVenueKeys.forEach(function(venue) {
+  allVenueKeys.forEach(function(venue) {
     var fd = wastageData[venue];
 
     // Location checkbox filter
@@ -624,22 +611,22 @@ function render() {
   var avgYtdCost = gYtdCost / avgLocCount;
   var avgYtdWasted = gYtdWasted / avgLocCount;
 
-  // Active fridge count: from RAW data (mode-independent), excluding office venues
+  // Active fridge count for card: ALL venues, excluding office — independent of table filters
   var latestActiveWeek = null;
   for (var li = displayWeeks.length - 1; li >= 0; li--) {
     var wk = displayWeeks[li];
     var anyActive = false;
-    rows.forEach(function(r) {
-      var raw = getWW(wastageData[r.venue].weeks[wk]);
+    allVenueKeys.forEach(function(v) {
+      var raw = getWW(wastageData[v].weeks[wk]);
       if (raw.i > 0) anyActive = true;
     });
     if (anyActive) { latestActiveWeek = wk; break; }
   }
   var activeFridges = 0;
   if (latestActiveWeek) {
-    rows.forEach(function(r) {
-      if (!officeRe.test(r.venue)) {
-        var raw = getWW(wastageData[r.venue].weeks[latestActiveWeek]);
+    allVenueKeys.forEach(function(v) {
+      if (!officeRe.test(v)) {
+        var raw = getWW(wastageData[v].weeks[latestActiveWeek]);
         if (raw.i > 0) activeFridges++;
       }
     });
