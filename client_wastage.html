@@ -83,6 +83,15 @@ thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
 
 <div class="controls">
   <div>
+  <label>Year</label><br>
+  <select id="yearFilter" onchange="render()">
+    <option value="2026">2026</option>
+    <option value="2025">2025</option>
+    <option value="2024">2024</option>
+    <option value="all">All Years</option>
+  </select>
+</div>
+  <div>
   <label>Category</label><br>
   <select id="catFilter" onchange="render()">
     <option value="all">All Categories</option>
@@ -324,17 +333,13 @@ function render() {
     return cc ? {i: cc.i || 0, w: cc.w || 0, c: cc.c || 0} : {i:0, w:0, c:0};
   }
 
-  // Determine display weeks
-  var displayWeeks = [];
-  var last12 = weeks.slice(-12);
-
-  if (mode === 'sequential') {
-    displayWeeks = last12;
-  } else if (mode === 'yoy') {
-    displayWeeks = weeks.filter(function(w) { return w.startsWith('2026-'); });
-    if (displayWeeks.length > 12) displayWeeks = displayWeeks.slice(-12);
-  } else if (mode === 'pop') {
-    displayWeeks = last12;
+  // Display weeks (year filter)
+  var yearFilter = document.getElementById('yearFilter').value;
+  var displayWeeks;
+  if (yearFilter === 'all') {
+    displayWeeks = weeks;
+  } else {
+    displayWeeks = weeks.filter(function(w) { return w.startsWith(yearFilter + '-'); });
   }
 
   // Build venue rows

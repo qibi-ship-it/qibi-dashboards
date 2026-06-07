@@ -212,6 +212,19 @@ def build_category_filter(categories):
     return html
 
 # ============================================================
+# YEAR FILTER BUILDER (shared by both dashboards)
+# ============================================================
+def build_year_filter(weeks):
+    """Build the year dropdown — current year is default"""
+    years = sorted(set(w.split('-')[0] for w in weeks), reverse=True)
+    html = '<div>\n  <label>Year</label><br>\n  <select id="yearFilter" onchange="render()">\n'
+    for y in years:
+        html += f'    <option value="{y}">{y}</option>\n'
+    html += '    <option value="all">All Years</option>\n'
+    html += '  </select>\n</div>'
+    return html
+
+# ============================================================
 # BUILD SALES DASHBOARD (v4.0)
 # ============================================================
 def build_sales_html():
@@ -237,6 +250,7 @@ def build_sales_html():
 {build_header("Client Sales Dashboard", meta_text)}
 
 <div class="controls">
+  {build_year_filter(weeks)}
   {build_category_filter(DATA.get("meta",{}).get("categories",[]))}
   <div>
     <label>Locations</label><br>
@@ -304,25 +318,15 @@ function render() {{
 
   var venueMap = salesData;
 
-  // ── 2. Determine display weeks ──
-  var displayWeeks = [];
-  var weeks2026 = weeks.filter(function(w) {{ return w.startsWith('2026-'); }});
-  var last12 = weeks.slice(-12);
-
-  function weekHasData(wk) {{
-    var total = 0;
-    Object.keys(venueMap).forEach(function(v) {{
-      total += getWV(venueMap[v].weeks[wk]).u;
-    }});
-    return total > 0;
-  }}
-
-  if (mode === 'sequential') {{
-    displayWeeks = last12;
+  // ── 2. Determine display weeks (year filter) ──
+  var yearFilter = document.getElementById('yearFilter').value;
+  var displayWeeks;
+  if (yearFilter === 'all') {{
+    displayWeeks = weeks;
   }} else {{
-    // YoY & Cumulative: show ALL 2026 weeks that have data
-    displayWeeks = weeks2026.filter(weekHasData);
+    displayWeeks = weeks.filter(function(w) {{ return w.startsWith(yearFilter + '-'); }});
   }}
+  var weeks2026 = weeks.filter(function(w) {{ return w.startsWith('2026-'); }});
 
   // ── 3. Build venue rows ──
   var rows = [];
@@ -648,6 +652,7 @@ def build_wastage_html():
 {build_header("Client Wastage Dashboard", meta_text)}
 
 <div class="controls">
+  {build_year_filter(weeks)}
   {build_category_filter(DATA.get("meta",{}).get("categories",[]))}
   <div>
     <label>Locations</label><br>
@@ -722,17 +727,13 @@ function render() {{
     return cc ? {{i: cc.i || 0, w: cc.w || 0, c: cc.c || 0}} : {{i:0, w:0, c:0}};
   }}
 
-  // Determine display weeks
-  var displayWeeks = [];
-  var last12 = weeks.slice(-12);
-
-  if (mode === 'sequential') {{
-    displayWeeks = last12;
-  }} else if (mode === 'yoy') {{
-    displayWeeks = weeks.filter(function(w) {{ return w.startsWith('2026-'); }});
-    if (displayWeeks.length > 12) displayWeeks = displayWeeks.slice(-12);
-  }} else if (mode === 'pop') {{
-    displayWeeks = last12;
+  // Display weeks (year filter)
+  var yearFilter = document.getElementById('yearFilter').value;
+  var displayWeeks;
+  if (yearFilter === 'all') {{
+    displayWeeks = weeks;
+  }} else {{
+    displayWeeks = weeks.filter(function(w) {{ return w.startsWith(yearFilter + '-'); }});
   }}
 
   // Build venue rows
