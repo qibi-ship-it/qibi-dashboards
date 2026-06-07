@@ -272,6 +272,10 @@ var currentMode = 'sequential';
 var sortCol = null;
 var sortDir = 'desc';
 
+function weekHasData(wk) {
+  return DATA.meta.weeks.indexOf(wk) !== -1;
+}
+
 function toggleLocPanel() {
   var p = document.getElementById('locPanel');
   p.classList.toggle('open');
