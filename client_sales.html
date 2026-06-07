@@ -48,7 +48,11 @@ tbody tr.avg-row td:first-child{position:sticky;left:0;top:48px;z-index:9;backgr
 tbody tr.avg-row:hover td{background:#0d0d0d}
 tbody tr.avg-row:hover td:first-child{background:#0d0d0d}
 thead th:first-child{position:sticky;left:0;z-index:12;background:#1a1a1a}
-.ytd-col{background:rgba(32,255,0,0.05)}
+thead th.ytd-col{position:sticky;right:0;z-index:13;background:#1a1a1a;box-shadow:-2px 0 4px rgba(0,0,0,0.4)}
+tbody td.ytd-col{position:sticky;right:0;z-index:2;background:#0a0a0a;box-shadow:-2px 0 4px rgba(0,0,0,0.4)}
+tbody tr:hover td.ytd-col{background:#1a1a1a}
+tbody tr.global-row td.ytd-col{background:#111}
+tbody tr.avg-row td.ytd-col{background:#0d0d0d}
 .green{color:#20ff00}
 .red{color:#ff4444}
 .orange{color:#ff9900}
