@@ -324,18 +324,8 @@ function render() {
     return cc ? {i: cc.i || 0, w: cc.w || 0, c: cc.c || 0} : {i:0, w:0, c:0};
   }
 
-  // Determine display weeks
-  var displayWeeks = [];
-  var last12 = weeks.slice(-12);
-
-  if (mode === 'sequential') {
-    displayWeeks = last12;
-  } else if (mode === 'yoy') {
-    displayWeeks = weeks.filter(function(w) { return w.startsWith('2026-'); });
-    if (displayWeeks.length > 12) displayWeeks = displayWeeks.slice(-12);
-  } else if (mode === 'pop') {
-    displayWeeks = last12;
-  }
+  // Display ALL weeks (horizontally scrollable)
+  var displayWeeks = weeks;
 
   // Build venue rows
   var rows = [];
