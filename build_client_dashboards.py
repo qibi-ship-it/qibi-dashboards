@@ -176,6 +176,11 @@ with open(SALES_FILE, "r", encoding="utf-8-sig") as f:
             refund_skipped += 1
             continue
 
+        vend_status = row.get("vend_status","").strip()
+        if vend_status and vend_status != "Success":
+            refund_skipped += 1  # count with refunds as filtered-out
+            continue
+
         ts = row.get("timestamp","").strip()
         dt = parse_vl_date(ts)
         if not dt:
