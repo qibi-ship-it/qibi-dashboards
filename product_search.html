@@ -108,16 +108,17 @@ var currentProduct = null;
 var sortCol = 'u';
 var sortDir = -1;
 
+function norm(s){return s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase()}
 function onSearch(val) {
-  var q = val.trim().toLowerCase();
+  var q = norm(val.trim());
   var sug = document.getElementById('suggestions');
   if (!q) { sug.classList.remove('open'); return; }
   var matches = DATA.products.filter(function(p) {
-    return p.name.toLowerCase().indexOf(q) >= 0;
+    return norm(p.name).indexOf(q) >= 0;
   }).slice(0, 15);
   if (matches.length) {
     sug.innerHTML = matches.map(function(p) {
-      var idx = p.name.toLowerCase().indexOf(q);
+      var idx = norm(p.name).indexOf(q);
       var hl = p.name.slice(0, idx) + '<b style="color:#20ff00">' + p.name.slice(idx, idx + q.length) + '</b>' + p.name.slice(idx + q.length);
       return '<div onclick="selectProduct(\'' + p.name.replace(/'/g, "\\'") + '\')">' + hl + '<span class="cat">' + p.cat + ' &middot; ' + p.tu + 'u</span></div>';
     }).join('');
