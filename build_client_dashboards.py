@@ -1377,24 +1377,39 @@ for p in perf_products:
         sold = perf_sales_pw[p["SKU"]][week]["sold"]
         weekly.append({"w": week, "s": sold, "i": intro})
 
+    sold_val = p["sold"]
+    rev_val = p["revenue"]
+    wom = p["weeks_on_menu"]
+    wasted_val = p["wasted"]
+    total_weeks = len(weeks_sorted)
+    price_val = round(rev_val / sold_val, 2) if sold_val > 0 else 0
+    sparkline = [w_data["s"] for w_data in weekly]  # sold per week for sparkline
+
     bs_products.append({
         "sku": p["SKU"],
         "name": p["product"],
         "block": block,
         "category": p["category"],
         "introduced": p["introduced"],
-        "sold": p["sold"],
-        "wasted": p["wasted"],
+        "sold": sold_val,
+        "wasted": wasted_val,
         "wastage_pct": p["wastage_pct"],
-        "weeks_on_menu": p["weeks_on_menu"],
+        "weeks_on_menu": wom,
+        "total_weeks": total_weeks,
+        "participation_pct": round(wom / total_weeks * 100, 1) if total_weeks > 0 else 0,
         "avg_sold_wk": p["avg_sold_wk"],
         "avg_wasted_wk": p["avg_wasted_wk"],
         "avg_intro_wk": p["avg_intro_wk"],
-        "revenue": p["revenue"],
+        "avg_revenue_wk": round(rev_val / wom, 1) if wom > 0 else 0,
+        "price": price_val,
+        "total_revenue": round(rev_val, 2),
+        "revenue": rev_val,
         "unit_cost": p["unit_cost"],
         "waste_cost": p["waste_cost"],
         "net_profit": p["net_profit"],
         "net_margin_pct": p["net_margin_pct"],
+        "rev_per_waste": round(rev_val / wasted_val, 1) if wasted_val > 0 else 0,
+        "sparkline": sparkline,
         "weekly": weekly
     })
 
