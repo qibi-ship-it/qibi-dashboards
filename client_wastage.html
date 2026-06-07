@@ -26,9 +26,9 @@ body{background:#0a0a0a;color:#fff;font-family:Inter,-apple-system,sans-serif;fo
 .pill.active{background:#20ff00;color:#000;border-color:#20ff00}
 .pill:hover{border-color:#20ff00}
 .content{padding:16px 32px}
-.table-wrap{overflow-x:auto;border-radius:14px;border:1px solid #1a1a1a;margin-top:12px}
+.table-wrap{overflow:auto;max-height:calc(100vh - 20px);border-radius:14px;border:1px solid #1a1a1a;margin-top:12px}
 table{width:100%;border-collapse:collapse;white-space:nowrap}
-thead th{background:#1a1a1a;color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:10px 12px;text-align:right;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none}
+thead th{background:#1a1a1a;color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:10px 12px;text-align:right;position:sticky;top:0;z-index:10;cursor:pointer;user-select:none}
 thead th:first-child{text-align:left;min-width:180px}
 thead th:hover{color:#20ff00}
 thead th .sort-arrow{margin-left:4px;font-size:10px;opacity:0.5}
@@ -42,9 +42,11 @@ tbody tr.global-row{background:#111;font-weight:700;border-top:2px solid #20ff00
 tbody tr.global-row td{color:#20ff00}
 tbody tr.global-row td:first-child{background:#111}
 tbody tr.avg-row{background:#0d0d0d;border-top:1px solid #333}
-tbody tr.avg-row td{color:#888;font-style:italic}
-tbody tr.avg-row td:first-child{background:#0d0d0d}
-thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
+tbody tr.avg-row td{color:#888;font-style:italic;position:sticky;top:48px;z-index:8;background:#0d0d0d}
+tbody tr.avg-row td:first-child{position:sticky;left:0;top:48px;z-index:9;background:#0d0d0d}
+tbody tr.avg-row:hover td{background:#0d0d0d}
+tbody tr.avg-row:hover td:first-child{background:#0d0d0d}
+thead th:first-child{position:sticky;left:0;z-index:12;background:#1a1a1a}
 .ytd-col{background:rgba(32,255,0,0.05)}
 .green{color:#20ff00}
 .red{color:#ff4444}
@@ -769,6 +771,15 @@ function render() {
 
   document.getElementById('mainContent').innerHTML = cardsHtml +
     '<div class="table-wrap"><table><thead>' + headerHtml + '</thead><tbody>' + bodyHtml + '</tbody></table></div>';
+
+  // Freeze panes: set avg-row sticky top to actual thead height
+  requestAnimationFrame(function() {
+    var th = document.querySelector('.table-wrap thead');
+    if (th) {
+      var h = th.offsetHeight;
+      document.querySelectorAll('.avg-row td').forEach(function(td) { td.style.top = h + 'px'; });
+    }
+  });
 }
 
 render();
