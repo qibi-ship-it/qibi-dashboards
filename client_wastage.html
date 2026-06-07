@@ -27,6 +27,7 @@ thead th{background:#1a1a1a;color:#888;font-size:11px;font-weight:600;text-trans
 thead th:first-child{text-align:left;min-width:180px}
 thead th:hover{color:#20ff00}
 thead th .sort-arrow{margin-left:4px;font-size:10px;opacity:0.5}
+thead th .week-date{font-weight:400;font-size:9px;color:#555;display:block;line-height:1.2}
 thead th.sorted .sort-arrow{opacity:1;color:#20ff00}
 tbody td{padding:8px 12px;border-top:1px solid #1a1a1a;text-align:right;font-variant-numeric:tabular-nums}
 tbody td:first-child{text-align:left;font-weight:500;position:sticky;left:0;background:#0a0a0a;z-index:1}
@@ -89,6 +90,13 @@ thead th:first-child{position:sticky;left:0;z-index:3;background:#1a1a1a}
     <option value="2025">2025</option>
     <option value="2024">2024</option>
     <option value="all">All Years</option>
+  </select>
+</div>
+  <div>
+  <label>Fridges</label><br>
+  <select id="fridgeFilter" onchange="render()">
+    <option value="active">Active Fridges</option>
+    <option value="all">All Fridges</option>
   </select>
 </div>
   <div>
@@ -237,6 +245,18 @@ function getMatchingWeekLastYear(wk) {
   return (p[0]-1) + '-W' + String(p[1]).padStart(2,'0');
 }
 
+function getWeekMonday(wk) {
+  var parts = wk.split('-W');
+  var year = parseInt(parts[0]);
+  var week = parseInt(parts[1]);
+  var jan4 = new Date(year, 0, 4);
+  var dow = jan4.getDay() || 7;
+  var w1Mon = new Date(year, 0, 4 - dow + 1);
+  var target = new Date(w1Mon.getTime() + (week - 1) * 7 * 86400000);
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[target.getMonth()] + ' ' + target.getDate();
+}
+
 var currentMode = 'sequential';
 var sortCol = null;
 var sortDir = 'desc';
@@ -320,6 +340,14 @@ function render() {
   var wastageData = DATA.wastage.by_fridge;
   var weeks = DATA.meta.weeks;
 
+  // Fridge filter: exclude Office/Bureau/Team
+  var fridgeFilter = document.getElementById('fridgeFilter').value;
+  var officeRe = /office|bureau|team/i;
+  var allVenueKeys = Object.keys(wastageData);
+  var filteredVenueKeys = fridgeFilter === 'active'
+    ? allVenueKeys.filter(function(v) { return !officeRe.test(v); })
+    : allVenueKeys;
+
   // Helper: extract values from a week entry, respecting category filter
   function getWW(weekEntry) {
     if (!weekEntry) return {i:0, w:0, c:0};
@@ -344,7 +372,7 @@ function render() {
 
   // Build venue rows
   var rows = [];
-  Object.keys(wastageData).forEach(function(venue) {
+  filteredVenueKeys.forEach(function(venue) {
     var fd = wastageData[venue];
 
     // Location checkbox filter
@@ -533,12 +561,27 @@ function render() {
   var avgYtdCost = gYtdCost / avgLocCount;
   var avgYtdWasted = gYtdWasted / avgLocCount;
 
+  // Active fridge count: latest non-empty week, excluding office venues
+  var latestActiveIdx = -1;
+  for (var li = displayWeeks.length - 1; li >= 0; li--) {
+    var anyActive = false;
+    rows.forEach(function(r) { if (r.weekValues[li] && r.weekValues[li].intro > 0) anyActive = true; });
+    if (anyActive) { latestActiveIdx = li; break; }
+  }
+  var activeFridges = 0;
+  if (latestActiveIdx >= 0) {
+    rows.forEach(function(r) {
+      if (!officeRe.test(r.venue) && r.weekValues[latestActiveIdx].intro > 0) activeFridges++;
+    });
+  }
+  var latestWkLabel = latestActiveIdx >= 0 ? displayWeeks[latestActiveIdx].replace(/^\d{4}-/, '') : '—';
+
   // Summary cards (filter-aware)
   var cardsHtml = '<div class="summary-cards">' +
     '<div class="summary-card"><div class="label">Total Introduced</div><div class="value">' + fmt(gYtdIntro) + '</div></div>' +
     '<div class="summary-card"><div class="label">Total Wasted</div><div class="value red">' + fmt(gYtdWasted) + '</div><div class="sub">' + fmtPct(gYtdPct) + ' waste rate</div></div>' +
     '<div class="summary-card"><div class="label">Waste Cost (COGS)</div><div class="value orange">' + fmtCHF(gYtdCost) + '</div></div>' +
-    '<div class="summary-card"><div class="label">Locations</div><div class="value">' + rows.length + '</div></div>' +
+    '<div class="summary-card"><div class="label">Active Fridges</div><div class="value">' + activeFridges + '</div><div class="sub">' + latestWkLabel + ' (excl. office)</div></div>' +
     '</div>';
 
   // Build table header
@@ -547,7 +590,8 @@ function render() {
   displayWeeks.forEach(function(wk, i) {
     var colIdx = i + 1;
     var label = wk.replace(/^\d{4}-/, '');
-    headerHtml += '<th onclick="toggleSort(' + colIdx + ')">' + label + ' <span class="sort-arrow">' + sa(colIdx) + '</span></th>';
+    var dateLabel = getWeekMonday(wk);
+    headerHtml += '<th onclick="toggleSort(' + colIdx + ')">' + label + '<span class="week-date">' + dateLabel + '</span><span class="sort-arrow">' + sa(colIdx) + '</span></th>';
   });
   var ytdColIdx = displayWeeks.length + 1;
   headerHtml += '<th class="ytd-col" onclick="toggleSort(' + ytdColIdx + ')">YTD <span class="sort-arrow">' + sa(ytdColIdx) + '</span></th></tr>';
