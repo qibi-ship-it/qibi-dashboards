@@ -513,22 +513,23 @@ function filterSiteTotals(f) {
 }
 
 // ==================== RENDER FUNCTIONS ====================
-function renderKPIs(mo) {
+function renderKPIs(mo, monthCount) {
   let totRev=0, totGP=0, totNP=0, totWaste=0, totIntro=0, totSold=0, totWasted=0, totCOGS=0;
   mo.forEach(m => { totRev+=m.revenue; totGP+=m.gross_profit; totNP+=m.net_profit; totWaste+=m.waste_cost; totIntro+=m.introduced; totSold+=m.sold; totWasted+=m.wasted; totCOGS+=m.cogs_introduced; });
+  let mc = monthCount || mo.length;
   let gm = totRev>0 ? (totGP/totRev*100) : 0;
   let nm = totRev>0 ? (totNP/totRev*100) : 0;
   let wp = totIntro>0 ? (totWasted/totIntro*100) : 0;
   let wcr = totRev>0 ? (totWaste/totRev*100) : 0;
   document.getElementById('kpiRow').innerHTML =
-    '<div class="kpi"><div class="label">Revenue</div><div class="value">'+fmtCHF(totRev)+'</div><div class="delta neutral">Avg CHF '+(mo.length>0?fmt(totRev/mo.length):0)+'/mo</div></div>'+
+    '<div class="kpi"><div class="label">Revenue</div><div class="value">'+fmtCHF(totRev)+'</div><div class="delta neutral">Avg CHF '+(mc>0?fmt(totRev/mc):0)+'/mo</div></div>'+
     '<div class="kpi"><div class="label">Gross Profit</div><div class="value">'+fmtCHF(totGP)+'</div><div class="delta '+pctClass(gm,65)+'">'+fmtPct(gm)+' margin</div></div>'+
     '<div class="kpi"><div class="label">Net Profit</div><div class="value">'+fmtCHF(totNP)+'</div><div class="delta '+pctClass(nm,55)+'">'+fmtPct(nm)+' margin</div></div>'+
     '<div class="kpi"><div class="label">Waste Cost</div><div class="value">'+fmtCHF(totWaste)+'</div><div class="delta '+wastePctClass(wcr)+'">'+fmtPct(wcr)+' of revenue</div></div>'+
     '<div class="kpi"><div class="label">Units Sold</div><div class="value">'+fmt(totSold)+'</div><div class="delta neutral">'+fmt(totIntro)+' introduced</div></div>'+
     '<div class="kpi"><div class="label">Wastage Rate</div><div class="value">'+fmtPct(wp)+'</div><div class="delta '+wastePctClass(wp)+'">'+fmt(totWasted)+' units wasted</div></div>'+
     '<div class="kpi"><div class="label">Avg Unit Cost</div><div class="value">CHF '+(totIntro>0?(totCOGS/totIntro).toFixed(2):'\u2014')+'</div><div class="delta neutral">Avg price CHF '+(totSold>0?(totRev/totSold).toFixed(2):'\u2014')+'</div></div>'+
-    '<div class="kpi"><div class="label">Avg Monthly Waste</div><div class="value">'+fmtCHF(mo.length>0?totWaste/mo.length:0)+'</div><div class="delta '+wastePctClass(wp)+'">'+fmtPct(wp)+' of units</div></div>';
+    '<div class="kpi"><div class="label">Avg Monthly Waste</div><div class="value">'+fmtCHF(mc>0?totWaste/mc:0)+'</div><div class="delta '+wastePctClass(wp)+'">'+fmtPct(wp)+' of units</div></div>';
 }
 
 function renderOverviewCharts(mo) {
@@ -873,7 +874,21 @@ function renderWasteTab(f) {
 function render() {
   let f = getFilters();
   let mo = filterMonthly(f);
-  renderKPIs(mo);
+  let catSKUFiltered = !f.allCategories || !f.allSKUs;
+
+  if (catSKUFiltered) {
+    // KPIs: compute from product-level data which HAS category/SKU
+    let prods = filterProducts(f);
+    let t = {revenue:0, cogs_sold:0, waste_cost:0, cogs_introduced:0, gross_profit:0, net_profit:0, introduced:0, sold:0, wasted:0};
+    prods.forEach(p => { t.revenue+=p.revenue; t.cogs_sold+=p.cogs_sold; t.waste_cost+=p.waste_cost; t.cogs_introduced+=p.cogs_introduced; t.gross_profit+=p.gross_profit; t.net_profit+=p.net_profit; t.introduced+=p.introduced; t.sold+=p.sold; t.wasted+=p.wasted; });
+    t.wastage_pct = t.introduced>0 ? +(t.wasted/t.introduced*100).toFixed(1) : 0;
+    t.gross_margin_pct = t.revenue>0 ? +(t.gross_profit/t.revenue*100).toFixed(1) : 0;
+    t.net_margin_pct = t.revenue>0 ? +(t.net_profit/t.revenue*100).toFixed(1) : 0;
+    renderKPIs([t], mo.length || DATA.months.length);
+  } else {
+    renderKPIs(mo);
+  }
+
   renderOverviewCharts(mo);
   renderSiteTab(f);
   renderRankings(f);
