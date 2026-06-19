@@ -871,20 +871,35 @@ function renderWasteTab(f) {
 }
 
 // ==================== MAIN RENDER ====================
+// Precompute all-products totals once for proportional scaling
+var _allProdTotals = null;
+function getAllProdTotals() {
+  if (_allProdTotals) return _allProdTotals;
+  var keys = ['revenue','cogs_sold','waste_cost','cogs_introduced','gross_profit','net_profit','introduced','sold','wasted'];
+  var t = {}; keys.forEach(function(k){ t[k]=0; });
+  DATA.products.forEach(function(p){ keys.forEach(function(k){ t[k]+=p[k]||0; }); });
+  _allProdTotals = t;
+  return t;
+}
+
 function render() {
   let f = getFilters();
   let mo = filterMonthly(f);
   let catSKUFiltered = !f.allCategories || !f.allSKUs;
 
   if (catSKUFiltered) {
-    // KPIs: compute from product-level data which HAS category/SKU
-    let prods = filterProducts(f);
-    let t = {revenue:0, cogs_sold:0, waste_cost:0, cogs_introduced:0, gross_profit:0, net_profit:0, introduced:0, sold:0, wasted:0};
-    prods.forEach(p => { t.revenue+=p.revenue; t.cogs_sold+=p.cogs_sold; t.waste_cost+=p.waste_cost; t.cogs_introduced+=p.cogs_introduced; t.gross_profit+=p.gross_profit; t.net_profit+=p.net_profit; t.introduced+=p.introduced; t.sold+=p.sold; t.wasted+=p.wasted; });
-    t.wastage_pct = t.introduced>0 ? +(t.wasted/t.introduced*100).toFixed(1) : 0;
-    t.gross_margin_pct = t.revenue>0 ? +(t.gross_profit/t.revenue*100).toFixed(1) : 0;
-    t.net_margin_pct = t.revenue>0 ? +(t.net_profit/t.revenue*100).toFixed(1) : 0;
-    renderKPIs([t], mo.length || DATA.months.length);
+    // Proportional scaling: compute what fraction of each metric the selected
+    // categories/SKUs represent (from products), apply to monthly totals.
+    // This keeps KPIs consistent with the unfiltered baseline.
+    var keys = ['revenue','cogs_sold','waste_cost','cogs_introduced','gross_profit','net_profit','introduced','sold','wasted'];
+    var allT = getAllProdTotals();
+    var filtT = {}; keys.forEach(function(k){ filtT[k]=0; });
+    filterProducts(f).forEach(function(p){ keys.forEach(function(k){ filtT[k]+=p[k]||0; }); });
+    var moT = {}; keys.forEach(function(k){ moT[k]=0; });
+    mo.forEach(function(m){ keys.forEach(function(k){ moT[k]+=m[k]||0; }); });
+    var scaled = {};
+    keys.forEach(function(k){ scaled[k] = allT[k] > 0 ? moT[k] * (filtT[k] / allT[k]) : 0; });
+    renderKPIs([scaled], mo.length);
   } else {
     renderKPIs(mo);
   }
