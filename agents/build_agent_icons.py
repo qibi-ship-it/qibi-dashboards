@@ -1,8 +1,8 @@
 """Qibi agent faces — ONE source for the Slack avatars and the Stream Deck keys (chosen by Marius 17 Nov 2026).
 
   csm        Q-Support (the Qibi face with its headset — Qibi's own icon)
-  forecast   the Qibi face, one eye under a magnifying glass ("il examine les chiffres")
-  estimatif  the Qibi face with « + = » eyes (the calculator)
+  production the Qibi face with « + = » eyes (the calculator) — Forecast + Estimatif merged 17 Nov 2026
+             (forecast/estimatif files kept with the same face for older Slack messages)
 
 Writes, next to this file:
   <agent>.svg / <agent>.png   Slack avatar: Qibi green on black, 512x512
@@ -34,17 +34,17 @@ SUPPORT = ("M230.4,221.69c14.26,0,25.82-11.56,25.82-25.82s-11.56-25.82-25.82-25.
 
 def faces(c):
     smile = f'<path d="{SMILE}" fill="{c}"/>'
+    calc = (f'<g fill="{c}"><rect x="117" y="121" width="61" height="26" rx="6"/>'
+            f'<rect x="134.5" y="103.5" width="26" height="61" rx="6"/>'
+            f'<rect x="205" y="106" width="62" height="22" rx="6"/>'
+            f'<rect x="205" y="140" width="62" height="22" rx="6"/></g>' + smile)
     return {
+        # 17 Nov: Forecast + Estimatif merged into the Production agent — it keeps the « + = » face (Marius's choice).
+        # forecast/estimatif files are kept, with the same face, for messages already posted under those names.
+        "production": calc,
+        "forecast": calc,
+        "estimatif": calc,
         "csm": f'<path d="{SUPPORT}" fill="{c}"/>',
-        "forecast": (f'<g transform="translate(0,-22)"><circle cx="147.4" cy="134.03" r="30.54" fill="{c}"/>'
-                     f'<circle cx="236.02" cy="126" r="54" fill="none" stroke="{c}" stroke-width="17"/>'
-                     f'<circle cx="236.02" cy="126" r="34" fill="{c}"/>'
-                     f'<line x1="276" y1="86" x2="318" y2="44" stroke="{c}" stroke-width="26" stroke-linecap="round"/></g>'
-                     + smile),
-        "estimatif": (f'<g fill="{c}"><rect x="117" y="121" width="61" height="26" rx="6"/>'
-                      f'<rect x="134.5" y="103.5" width="26" height="61" rx="6"/>'
-                      f'<rect x="205" y="106" width="62" height="22" rx="6"/>'
-                      f'<rect x="205" y="140" width="62" height="22" rx="6"/></g>' + smile),
     }
 
 
